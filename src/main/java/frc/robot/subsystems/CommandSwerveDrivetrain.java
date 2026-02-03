@@ -17,6 +17,7 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -226,6 +227,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
+    Rotation2d targetAngle = new Rotation2d(0);
+
     @Override
     public void periodic() {
         /*
@@ -245,6 +248,20 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }
+
+        Pose2d targetPose = new Pose2d(new Translation2d(4.626,4.026), new Rotation2d(0));
+
+        double dx = targetPose.getX() - this.getState().Pose.getX();
+        double dy = targetPose.getY() - this.getState().Pose.getY();
+
+        Rotation2d angle = new Rotation2d(Math.atan2(dy,dx));
+
+        targetAngle = angle;
+
+    }
+
+    public Rotation2d returnTargetAngle(){
+        return targetAngle;
     }
 
     private void startSimThread() {

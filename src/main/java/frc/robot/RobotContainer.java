@@ -12,17 +12,20 @@ import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.VisionSubsystem;
 
 public class RobotContainer {
     private double MaxTheoreticalSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -37,12 +40,21 @@ public class RobotContainer {
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
+
+
+
+
+
+    private final SwerveRequest.FieldCentricFacingAngle facingAngle = new SwerveRequest.FieldCentricFacingAngle()
+            .withDeadband(MaxSpeed*0.1).withRotationalDeadband(MaxAngularRate * 0.1)
+            .withDriveRequestType(DriveRequestType.OpenLoopVoltage).withHeadingPID(5.0, 0.0, 0.0);
+
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
     private final CommandXboxController joystick = new CommandXboxController(0);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-
+    public final VisionSubsystem vision = new VisionSubsystem();
     private SendableChooser<Command> autoChooser = new SendableChooser<>();
 
     public RobotContainer() {
@@ -82,9 +94,21 @@ public class RobotContainer {
 
         // reset the field-centric heading on left bumper press
         joystick.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric())); // maybe remove this?
+        joystick.leftTrigger().whileTrue(drivetrain.applyRequest(()-> // While left trigger is held, drive while maintain a heading facing the target
+            facingAngle.withVelocityX(-joystick.getLeftY() * MaxSpeed)
+                       .withVelocityY(-joystick.getLeftX() * MaxSpeed)
+                       .withTargetDirection(drivetrain.returnTargetAngle())
+        ));
 
         drivetrain.registerTelemetry(logger::telemeterize);
         
+        vision.setDefaultCommand(new RunCommand(() -> {
+            var estimatedGlobalPose = vision.getEstimatedGlobalPose(drivetrain.getState().Pose);
+            if (estimatedGlobalPose.isPresent()) {
+                drivetrain.addVisionMeasurement(estimatedGlobalPose.get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
+            }
+        }));
+
         registerNamedCommands();
         createAutos();
     }
