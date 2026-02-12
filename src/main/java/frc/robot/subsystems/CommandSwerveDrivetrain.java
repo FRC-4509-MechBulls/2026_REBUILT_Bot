@@ -21,6 +21,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -256,7 +257,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
         Rotation2d angle = new Rotation2d(Math.atan2(dy,dx));
 
-        targetAngle = angle;
+        targetAngle = angle.rotateBy(new Rotation2d(Units.degreesToRadians(180)));
 
     }
 

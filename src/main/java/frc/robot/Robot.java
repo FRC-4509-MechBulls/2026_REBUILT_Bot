@@ -4,6 +4,10 @@
 
 package frc.robot;
 
+import java.util.Optional;
+
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -12,6 +16,8 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
   private final RobotContainer m_robotContainer;
+  private Optional<Alliance> lastAlliance = Optional.empty();
+
 
   public Robot() {
     m_robotContainer = new RobotContainer();
@@ -20,6 +26,18 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run(); 
+
+    Optional<Alliance> currentAlliance = DriverStation.getAlliance();
+
+    if(currentAlliance.isPresent() && !currentAlliance.equals(lastAlliance)) {
+      if(currentAlliance.get() == Alliance.Red) {
+        m_robotContainer.updateControlsForAlliance(Alliance.Red);
+      } else if (currentAlliance.get() == Alliance.Blue) {
+        m_robotContainer.updateControlsForAlliance(Alliance.Blue);
+      }
+      lastAlliance = currentAlliance;
+    }
+    
   }
 
   @Override

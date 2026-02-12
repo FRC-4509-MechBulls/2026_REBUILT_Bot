@@ -7,11 +7,13 @@ package frc.robot;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest.ForwardPerspectiveValue;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -24,26 +26,25 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.ClimbSubsystem;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
+import frc.robot.subsystems.StateController;
 import frc.robot.subsystems.VisionSubsystem;
 
 public class RobotContainer {
     private double MaxTheoreticalSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
-    private double MaxSpeed = MaxTheoreticalSpeed * 0.3;
+    private double MaxSpeed = MaxTheoreticalSpeed * 0.8;
     private double MaxTheoreticalAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
-    private double MaxAngularRate = MaxTheoreticalAngularRate * 0.3;
+    private double MaxAngularRate = MaxTheoreticalAngularRate * 0.8;
 
     /* Setting up bindings for necessary control of the swerve drive platform */
-    private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
+    private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
-
-
-
-
-
 
     private final SwerveRequest.FieldCentricFacingAngle facingAngle = new SwerveRequest.FieldCentricFacingAngle()
             .withDeadband(MaxSpeed*0.1).withRotationalDeadband(MaxAngularRate * 0.1)
@@ -55,6 +56,11 @@ public class RobotContainer {
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     public final VisionSubsystem vision = new VisionSubsystem();
+    public final ShooterSubsystem shooter = new ShooterSubsystem();
+    public final IntakeSubsystem intake = new IntakeSubsystem();
+    public final ClimbSubsystem climb = new ClimbSubsystem();
+    public final StateController stateController = new StateController(drivetrain, climb, shooter, vision, intake);
+
     private SendableChooser<Command> autoChooser = new SendableChooser<>();
 
     public RobotContainer() {
@@ -72,7 +78,34 @@ public class RobotContainer {
                     .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
-
+        joystick.povUp().whileTrue(
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(-1) // Drive forward with negative Y (forward)
+                    .withVelocityY(0) // Drive left with negative X (left)
+                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+            )
+        );
+        joystick.povDown().whileTrue(
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(1) // Drive forward with negative Y (forward)
+                    .withVelocityY(0) // Drive left with negative X (left)
+                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+            )
+        );
+        joystick.povLeft().whileTrue(
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(0) // Drive forward with negative Y (forward)
+                    .withVelocityY(-1) // Drive left with negative X (left)
+                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+            )
+        );
+        joystick.povRight().whileTrue(
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(0) // Drive forward with negative Y (forward)
+                    .withVelocityY(1) // Drive left with negative X (left)
+                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+            )
+        );
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
@@ -97,26 +130,19 @@ public class RobotContainer {
         joystick.leftTrigger().whileTrue(drivetrain.applyRequest(()-> // While left trigger is held, drive while maintain a heading facing the target
             facingAngle.withVelocityX(-joystick.getLeftY() * MaxSpeed)
                        .withVelocityY(-joystick.getLeftX() * MaxSpeed)
-                       .withTargetDirection(drivetrain.returnTargetAngle())
+                       .withTargetDirection(stateController.calculateAngleToAim())
         ));
 
         drivetrain.registerTelemetry(logger::telemeterize);
         
-        vision.setDefaultCommand(new RunCommand(() -> {
-            var estimatedGlobalPose = vision.getEstimatedGlobalPose(drivetrain.getState().Pose);
-            if (estimatedGlobalPose.isPresent()) {
-                drivetrain.addVisionMeasurement(estimatedGlobalPose.get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
-            }
-        }));
+        
 
         registerNamedCommands();
         createAutos();
     }
-
     public void registerNamedCommands() {
         NamedCommands.registerCommand("doNothing", new InstantCommand());
     }
-
     public void createAutos() {
         autoChooser.setDefaultOption("nothing", null);
 
@@ -125,8 +151,11 @@ public class RobotContainer {
 
         SmartDashboard.putData("autoChooser", autoChooser);
     }
-
     public Command getAutonomousCommand() {
         return autoChooser.getSelected();
+    }
+
+    public void updateControlsForAlliance(Alliance alliance) {
+        stateController.updateAlliance(alliance);
     }
 }
