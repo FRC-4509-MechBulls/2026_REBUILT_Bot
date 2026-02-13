@@ -6,6 +6,9 @@ import com.pathplanner.lib.util.DriveFeedforwards;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
@@ -55,15 +58,35 @@ public class Constants {
         public static final double extensionkP = 0;
         public static final double extensionkI = 0;
         public static final double extensionkD = 0;
+        public static final double climbRestingAngle = 0;
+        public static final double climbReadyAngle = 45;
+        public static final double climbRetractedDistance = 0;
+        public static final double climbExtendedDistance = 5;
     }
 
     public class DriveConstants {
         public static Matrix<N3, N1> visionStd = VecBuilder.fill(.05,.05,Units.degreesToRadians(5));
-        public static final double aimDampeningFactorX = 0.75;
-        public static final double aimDampeningFactorY = 0.75;
+        public static final double aimDampeningFactorX = 0.5;
+        public static final double aimDampeningFactorY = 0.5;
         public static final double aimkP = 5;
         public static final double aimkI = 0;
         public static final double aimkD = 0;
+    }
+
+    public class PoseConstants {
+        public static final Pose2d blueHub = new Pose2d(new Translation2d(4.626,4.034), new Rotation2d());
+        public static final Pose2d redHub =  new Pose2d(new Translation2d(11.94, 4.034), new Rotation2d());
+
+        public static final Pose2d blueAlliance1 =  new Pose2d(new Translation2d(2.31, 2.017), new Rotation2d());
+        public static final Pose2d blueAlliance2 =  new Pose2d(new Translation2d(2.31, 6.05), new Rotation2d());
+
+        public static final Pose2d redAlliance1 =  new Pose2d(new Translation2d(14.23, 2.017), new Rotation2d());
+        public static final Pose2d redAlliance2 =  new Pose2d(new Translation2d(14.23, 6.05), new Rotation2d());
+
+        public static final Pose2d neutralZone1 =  new Pose2d(new Translation2d(), new Rotation2d());
+        public static final Pose2d neutralZone2 =  new Pose2d(new Translation2d(), new Rotation2d());
+
+        
     }
 
     public static boolean disableHAL = false;

@@ -1,9 +1,12 @@
-package frc.robot;
+package frc.robot.Util;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import frc.robot.Constants;
+import frc.robot.Constants.DriveConstants;
+import frc.robot.Constants.PoseConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -15,11 +18,11 @@ import edu.wpi.first.math.util.Units;
 
 public class HubOffsetUtil {
 
-//    private final Translation2d defaultBlueHubPose = FieldConstants.Hub.topCenterPoint.toTranslation2d();
-//    private final Translation2d defaultRedHubPose = FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
+    private final Translation2d defaultBlueHubPose = Constants.PoseConstants.blueHub.getTranslation();
+    private final Translation2d defaultRedHubPose = Constants.PoseConstants.redHub.getTranslation();
 
-    private final Translation2d defaultBlueHubPose = new Translation2d(4.626,4.026);
-    private final Translation2d defaultRedHubPose = new Translation2d(11.94, Units.inchesToMeters(158.85));
+    private final double dampeningFactorX = Constants.DriveConstants.aimDampeningFactorX;
+    private final double dampeningFactorY = Constants.DriveConstants.aimDampeningFactorY;
 
     private CommandSwerveDrivetrain drivetrain;
 
@@ -40,6 +43,7 @@ public class HubOffsetUtil {
 
     public Translation2d predictFutureLocation(double exitVelocityX, Alliance alliance) {
 
+        
         Translation2d defaultLocation;
         if(alliance == Alliance.Blue){
             defaultLocation = defaultBlueHubPose;
@@ -51,13 +55,13 @@ public class HubOffsetUtil {
         double airtime = calculateAirtime(exitVelocityX, alliance, defaultLocation);
 
         Translation2d distanceMoved = new Translation2d(
-            (-driveSpeed.vxMetersPerSecond * airtime),
-            (-driveSpeed.vyMetersPerSecond * airtime)
+            (-driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),
+            (-driveSpeed.vyMetersPerSecond * airtime * dampeningFactorY)
         );
         if(alliance == Alliance.Red){
             distanceMoved = new Translation2d(
-                (driveSpeed.vxMetersPerSecond * airtime),
-                (driveSpeed.vyMetersPerSecond * airtime)
+                (driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),
+                (driveSpeed.vyMetersPerSecond * airtime * dampeningFactorY)
             );
         }
 

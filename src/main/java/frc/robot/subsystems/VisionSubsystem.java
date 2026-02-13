@@ -21,9 +21,14 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 public class VisionSubsystem extends SubsystemBase {
 
     AprilTagFieldLayout aprilTagFieldLayout;
-    PhotonCamera camera1 = new PhotonCamera("Camera1");
+    PhotonCamera frontLeftCamera = new PhotonCamera("frontLeftCamera");
+    PhotonCamera frontRightCamera = new PhotonCamera("frontRightCamera");
+    PhotonCamera backLeftCamera = new PhotonCamera("backLeftCamera");
 
-    PhotonPoseEstimator poseEstimator;
+    PhotonPoseEstimator frontLeftPoseEstimator;
+    PhotonPoseEstimator frontRightPoseEstimator;
+    PhotonPoseEstimator backLeftPoseEstimator;
+
     Transform3d robotToCamera = new Transform3d(new Translation3d(), new Rotation3d());
 
     public VisionSubsystem (){
@@ -33,19 +38,23 @@ public class VisionSubsystem extends SubsystemBase {
             e.printStackTrace();
         }
 
-        poseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
-        poseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
+        frontLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
+        frontLeftPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
+        frontRightPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
+        frontRightPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
+        backLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
+        backLeftPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
     }
 
     public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
          
-        if(camera1.isConnected()){
-            List<PhotonPipelineResult> unreadResults = camera1.getAllUnreadResults();
+        if(frontLeftCamera.isConnected()){
+            List<PhotonPipelineResult> unreadResults = frontLeftCamera.getAllUnreadResults();
             if (!unreadResults.isEmpty()) {
                 PhotonPipelineResult latestResult = unreadResults.get(unreadResults.size() - 1);
-                Optional<EstimatedRobotPose> camera1Estimate = poseEstimator.update(latestResult);
-                if(camera1Estimate.isPresent()) {
-                    return camera1Estimate;
+                Optional<EstimatedRobotPose> frontLeftCameraEstimate = frontLeftPoseEstimator.estimateCoprocMultiTagPose(latestResult);
+                if(frontLeftCameraEstimate.isPresent()) {
+                    return frontLeftCameraEstimate;
                 }
             }
             return Optional.empty();

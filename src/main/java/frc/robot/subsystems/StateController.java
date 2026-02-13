@@ -12,11 +12,12 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.AllianceFlipUtil;
 import frc.robot.Constants;
 import frc.robot.FieldConstants;
-import frc.robot.HubOffsetUtil;
 import frc.robot.Constants.DriveConstants;
+import frc.robot.Util.AllianceFlipUtil;
+import frc.robot.Util.HubOffsetUtil;
+import frc.robot.Util.TargetOffsetUtil;
 
 public class StateController extends SubsystemBase{
 
@@ -26,6 +27,7 @@ public class StateController extends SubsystemBase{
     VisionSubsystem visionSubsystem;
     IntakeSubsystem intakeSubsystem;
     HubOffsetUtil hubOffsetUtil;
+    TargetOffsetUtil targetOffsetUtil;
 
     Pose2d currentPose;
     Pose2d targetPose;
@@ -37,9 +39,21 @@ public class StateController extends SubsystemBase{
         ALLIANCE_ZONE,
         NEUTRAL_ZONE
     } 
+    enum ZoneTargets {
+        BLUE_ALLIANCE_1,
+        BLUE_ALLIANCE_2,
+        RED_ALLIANCE_1,
+        RED_ALLIANCE_2
+    }
     Targets currentTarget;
+    ZoneTargets currentZoneTarget;
     Pose2d currentTargetPose;
     double currentAngle;
+
+    boolean intaking;
+    boolean hopperExtended;
+    boolean climbRotated;
+    boolean climbExtended;
 
     Alliance currentAlliance;
 
@@ -51,24 +65,29 @@ public class StateController extends SubsystemBase{
             visionSubsystem = vision;
             intakeSubsystem = intake;
             hubOffsetUtil = new HubOffsetUtil(drive);
+            targetOffsetUtil = new TargetOffsetUtil(drive);
 
             currentPose = drivetrain.getState().Pose;
             targetPose = new Pose2d();
             currentTarget = Targets.HUB;
+            currentZoneTarget = ZoneTargets.BLUE_ALLIANCE_1;
             currentTargetPose = new Pose2d();
 
             targetPoseField = new Field2d();
             targetPoseField.setRobotPose(targetPose);
             SmartDashboard.putData("TargetPoseVisualization", targetPoseField);
-
             currentAngle = 0;
             SmartDashboard.putNumber("CalculatedAngle", currentAngle);
+
+            intaking = false;
+            hopperExtended = false;
+            climbRotated = false;
+            climbExtended = false;
 
             currentAlliance = Alliance.Blue;
    }
 
     // Shooter Methods
-
     public void setHoodAngle(double angle) {
         shooterSubsystem.setHoodAngle(angle);
     }
@@ -80,7 +99,6 @@ public class StateController extends SubsystemBase{
     }
 
     // Intake Methods
-
     public void setIntakePosition(double position) {
         intakeSubsystem.setPosition(position);
     }
@@ -89,7 +107,6 @@ public class StateController extends SubsystemBase{
     }
 
     // Climb Methods
-
     public void setClimbAngle(double angle) {
         climbSubsystem.setDesiredAngle(angle);
     }
@@ -98,7 +115,6 @@ public class StateController extends SubsystemBase{
     }
 
     // General Methods
-
     public void resetState() {
         setHoodAngle(0);
         setShooterSpeed(0);
@@ -137,17 +153,20 @@ public class StateController extends SubsystemBase{
             }
         }
     }
-    public Pose2d predictFuturePose() {        
+    public Pose2d predictFutureHubPose() {        
         return new Pose2d(hubOffsetUtil.predictFutureLocation(calculateFlywheelSpeed(), currentAlliance), new Rotation2d());
+    }
+    public Pose2d predictFutureTargetPose() {        
+        return new Pose2d(targetOffsetUtil.predictFutureLocation(calculateFlywheelSpeed(), currentAlliance), new Rotation2d());
     }
     public Rotation2d calculateAngleToAim() {
 
         Rotation2d angle = new Rotation2d();
         Pose2d targetPose = new Pose2d();
-        //updateCurrentTarget();
+        updateCurrentTarget();
 
         if(currentTarget.equals(Targets.HUB)) {
-            targetPose = predictFuturePose();
+            targetPose = predictFutureHubPose();
 
             double dx = (AllianceFlipUtil.applyX(targetPose.getX()) - AllianceFlipUtil.applyX(drivetrain.getState().Pose.getX()));
             double dy = AllianceFlipUtil.applyY(targetPose.getY()) - AllianceFlipUtil.applyY(drivetrain.getState().Pose.getY());
@@ -157,7 +176,15 @@ public class StateController extends SubsystemBase{
 
             angle = (new Rotation2d(Math.atan2(dy,dx)));
         } else if(currentTarget.equals(Targets.ALLIANCE_ZONE)) {
-            // blah blah blah
+            targetPose = predictFutureTargetPose();
+
+            double dx = (AllianceFlipUtil.applyX(targetPose.getX()) - AllianceFlipUtil.applyX(drivetrain.getState().Pose.getX()));
+            double dy = AllianceFlipUtil.applyY(targetPose.getY()) - AllianceFlipUtil.applyY(drivetrain.getState().Pose.getY());
+
+            SmartDashboard.putNumber("CalculatedDx", dx);
+            SmartDashboard.putNumber("CalculatedDy", dy);
+
+            angle = (new Rotation2d(Math.atan2(dy,dx)));
         } else {
             // blah blah blah (neutral zone)
         }
@@ -182,7 +209,13 @@ public class StateController extends SubsystemBase{
     }
     public double calculateFlywheelSpeed() {
 
-        // take distance and hood angle and make up a flywheel speed
+        // use a linear regression model for experiment data points that graph horizontal distance (x)
+        // from hub vs the required motor speed to consistently score fuel
+
+        return 10; 
+    }
+    public double calculateFuelExitVelocity() {
+        // should be some fraction of the flywheel speed
 
         return 10;
     }
@@ -199,22 +232,35 @@ public class StateController extends SubsystemBase{
         targetPoseField.setRobotPose(currentTargetPose);
         
         SmartDashboard.putNumber("CalculatedAngle", currentAngle);
+        SmartDashboard.putString("CurrentTarget", currentTarget.toString());
     }
 
-    public void intake(boolean intake) {
-        if(intake){
+    // Robot Actions
+    public void toggleIntake() {
+        if(!intaking){
             setIntakePosition(Constants.IntakeConstants.extendedPosition);
             setIntakeWheels(true);
+            hopperExtended = true;
+            intaking = true;
+        } else {
+            setIntakeWheels(false);
+            intaking = false;
+        }
+    }
+    public void toggleHopper() {
+        if(!hopperExtended){
+            setIntakePosition(Constants.IntakeConstants.extendedPosition);
+            hopperExtended = true;
         } else {
             setIntakePosition(Constants.IntakeConstants.retractedPosition);
-            setIntakeWheels(false);
+            hopperExtended = false;
         }
     }
     public void shoot(boolean shoot) {
         if(shoot){
             setShooterSpeed(calculateFlywheelSpeed());
             try {
-                wait(1000);
+                Thread.sleep(Constants.ShooterConstants.windUpTime);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -222,6 +268,29 @@ public class StateController extends SubsystemBase{
         } else{
             setShooterSpeed(0);
             setIndexer(false);
+        }
+    }
+    public void toggleClimbRotate() {
+        if(!climbRotated) {
+            setClimbAngle(Constants.ClimbConstants.climbReadyAngle);
+            if(intaking) {
+                toggleIntake();
+            }
+            if(hopperExtended){
+                toggleHopper();
+            }
+            climbRotated = true;
+        } else {
+            setClimbAngle(Constants.ClimbConstants.climbRestingAngle);
+            climbRotated = false;
+        }
+    }
+    public void toggleClimbExtension() {
+        if(!climbExtended) {
+            setClimbExtension(Constants.ClimbConstants.climbExtendedDistance);
+            climbExtended = true;
+        } else {
+            setClimbExtension(Constants.ClimbConstants.climbRetractedDistance);
         }
     }
 
