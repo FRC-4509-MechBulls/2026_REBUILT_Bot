@@ -301,4 +301,13 @@ public class StateController extends SubsystemBase{
         }
     }
 
+    public void resetPoseToOrigin() {
+        Rotation2d currentRotation = drivetrain.getState().Pose.getRotation();
+    
+        drivetrain.resetPose(
+            new Pose2d(0.0, 0.0, currentRotation)
+        );
+    }
+    
+    
 }
