@@ -233,6 +233,13 @@ public class StateController extends SubsystemBase{
         
         SmartDashboard.putNumber("CalculatedAngle", currentAngle);
         SmartDashboard.putString("CurrentTarget", currentTarget.toString());
+        SmartDashboard.putBoolean("Intaking", intaking);
+        SmartDashboard.putBoolean("HopperExtended", hopperExtended);
+        SmartDashboard.putBoolean("ClimbRotated", climbRotated);
+        SmartDashboard.putBoolean("ClimbExtended", climbExtended);
+        SmartDashboard.putString("CurrentTarget", currentTarget.toString());
+        SmartDashboard.putString("CurrentZoneTarget", currentZoneTarget.toString());
+        
     }
 
     // Robot Actions
