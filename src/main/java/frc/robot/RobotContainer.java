@@ -67,6 +67,7 @@ public class RobotContainer {
     public final InstantCommand resetRobot = new InstantCommand(()-> stateController.resetState()); 
     public final InstantCommand doShooting = new InstantCommand(()-> stateController.shoot(true));
     public final InstantCommand stopShooting = new InstantCommand(()-> stateController.shoot(false));    
+    public final InstantCommand doSimpleShooting = new InstantCommand(()-> stateController.simpleShoot(true));
     public final InstantCommand toggleIntake = new InstantCommand(()-> stateController.toggleIntake());   
     public final InstantCommand toggleHopper = new InstantCommand(()-> stateController.toggleHopper());
     public final InstantCommand toggleClimbRotate = new InstantCommand(()-> stateController.toggleClimbRotate());
@@ -147,6 +148,8 @@ public class RobotContainer {
         operatorController.b().onTrue(resetRobot);
         operatorController.leftTrigger().onTrue(doShooting);
         operatorController.leftTrigger().onFalse(stopShooting);
+        operatorController.leftBumper().onTrue(doSimpleShooting);
+        operatorController.leftBumper().onFalse(stopShooting);
         operatorController.a().onTrue(toggleIntake);
         operatorController.x().onTrue(toggleHopper);
         driverController.rightBumper().onTrue(toggleClimbRotate);

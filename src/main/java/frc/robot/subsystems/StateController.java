@@ -4,6 +4,7 @@ import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -54,6 +55,7 @@ public class StateController extends SubsystemBase{
     boolean hopperExtended;
     boolean climbRotated;
     boolean climbExtended;
+    boolean onBump;
 
     Alliance currentAlliance;
 
@@ -83,6 +85,7 @@ public class StateController extends SubsystemBase{
             hopperExtended = false;
             climbRotated = false;
             climbExtended = false;
+            onBump = false;
 
             currentAlliance = Alliance.Blue;
    }
@@ -128,8 +131,8 @@ public class StateController extends SubsystemBase{
         currentAlliance = alliance;
     }
     public void addVisionMeasurement() {
-        if(visionSubsystem.getEstimatedGlobalPose(currentPose).isPresent()){
-            drivetrain.addVisionMeasurement(visionSubsystem.getEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
+        if(visionSubsystem.getFLEstimatedGlobalPose(currentPose).isPresent()){
+            drivetrain.addVisionMeasurement(visionSubsystem.getFLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
         }
     }
     public void updateCurrentTarget() {
@@ -226,6 +229,25 @@ public class StateController extends SubsystemBase{
             setHoodAngle(Constants.ShooterConstants.hoodAngle2);
         }
     }
+    public void detectBump() {
+
+        double robotRoll = drivetrain.getPigeon2().getRoll().getValueAsDouble();
+        double robotPitch = drivetrain.getPigeon2().getPitch().getValueAsDouble();
+        double currentRobotVelocityX = drivetrain.getState().Speeds.vxMetersPerSecond; // if > 0, moving toward +x
+         
+        if(!onBump && (Math.abs(robotRoll) > 12 || Math.abs(robotPitch) > 12)) {
+            onBump = true;
+        }
+        else if(onBump && (Math.abs(robotRoll) < 1 && Math.abs(robotPitch) < 1)) {
+            onBump = false;
+            if(currentRobotVelocityX > 0) {
+                drivetrain.getState().Pose.plus(new Transform2d(Constants.DriveConstants.bumpTravelDifference, 0.0, new Rotation2d()));
+            } else {
+                drivetrain.getState().Pose.minus(new Pose2d(Constants.DriveConstants.bumpTravelDifference, 0, new Rotation2d()));
+            }
+        }
+
+    }
     public void periodic() {
         addVisionMeasurement();
         updateHoodAngle();
@@ -276,6 +298,15 @@ public class StateController extends SubsystemBase{
             setShooterSpeed(0);
             setIndexer(false);
         }
+    }
+    public void simpleShoot(boolean shoot) {
+        setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeed);
+        try {
+            Thread.sleep(Constants.ShooterConstants.windUpTime);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        setIndexer(true);
     }
     public void toggleClimbRotate() {
         if(!climbRotated) {

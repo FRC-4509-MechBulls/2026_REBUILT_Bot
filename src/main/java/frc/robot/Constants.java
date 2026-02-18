@@ -45,6 +45,8 @@ public class Constants {
         public static final double indexerLoadSpeed = 1;
 
         public static final double maxFlyWheelSpeed = 10;
+        public static final double simpleShootingSpeed = 1;
+        
     }
 
     public class ClimbConstants {
@@ -71,6 +73,8 @@ public class Constants {
         public static final double aimkP = 5;
         public static final double aimkI = 0;
         public static final double aimkD = 0;
+
+        public static final double bumpTravelDifference = 0.5;
     }
 
     public class PoseConstants {

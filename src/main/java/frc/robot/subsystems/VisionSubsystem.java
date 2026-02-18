@@ -11,6 +11,7 @@ import org.photonvision.targeting.PhotonPipelineResult;
 
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 
@@ -29,6 +30,8 @@ public class VisionSubsystem extends SubsystemBase {
     PhotonPoseEstimator frontRightPoseEstimator;
     PhotonPoseEstimator backLeftPoseEstimator;
 
+    SwerveDrivePoseEstimator masterPoseEstimator;
+
     Transform3d robotToCamera = new Transform3d(new Translation3d(), new Rotation3d());
 
     public VisionSubsystem (){
@@ -44,9 +47,10 @@ public class VisionSubsystem extends SubsystemBase {
         frontRightPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
         backLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
         backLeftPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
+
     }
 
-    public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
+    public Optional<EstimatedRobotPose> getFLEstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
          
         if(frontLeftCamera.isConnected()){
             List<PhotonPipelineResult> unreadResults = frontLeftCamera.getAllUnreadResults();
@@ -62,5 +66,7 @@ public class VisionSubsystem extends SubsystemBase {
         return Optional.empty();
     }
 
-    
+    public void periodic() {
+        
+    }
 }
