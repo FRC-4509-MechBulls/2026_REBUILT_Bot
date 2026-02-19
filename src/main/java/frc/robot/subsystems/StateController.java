@@ -134,6 +134,15 @@ public class StateController extends SubsystemBase{
         if(visionSubsystem.getFLEstimatedGlobalPose(currentPose).isPresent()){
             drivetrain.addVisionMeasurement(visionSubsystem.getFLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
         }
+        if(visionSubsystem.getFREstimatedGlobalPose(currentPose).isPresent()){
+            drivetrain.addVisionMeasurement(visionSubsystem.getFREstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
+        }
+        if(visionSubsystem.getBLEstimatedGlobalPose(currentPose).isPresent()){
+            drivetrain.addVisionMeasurement(visionSubsystem.getBLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
+        }
+        if(visionSubsystem.getBREstimatedGlobalPose(currentPose).isPresent()){
+            drivetrain.addVisionMeasurement(visionSubsystem.getBREstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
+        }
     }
     public void updateCurrentTarget() {
         if(currentAlliance == Alliance.Blue) {

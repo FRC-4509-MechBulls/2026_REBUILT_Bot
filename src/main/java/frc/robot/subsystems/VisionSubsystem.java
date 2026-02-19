@@ -25,14 +25,21 @@ public class VisionSubsystem extends SubsystemBase {
     PhotonCamera frontLeftCamera = new PhotonCamera("frontLeftCamera");
     PhotonCamera frontRightCamera = new PhotonCamera("frontRightCamera");
     PhotonCamera backLeftCamera = new PhotonCamera("backLeftCamera");
+    PhotonCamera backRightCamera = new PhotonCamera("backRightCamera");
+
 
     PhotonPoseEstimator frontLeftPoseEstimator;
     PhotonPoseEstimator frontRightPoseEstimator;
     PhotonPoseEstimator backLeftPoseEstimator;
+    PhotonPoseEstimator backRightPoseEstimator;
+
 
     SwerveDrivePoseEstimator masterPoseEstimator;
 
-    Transform3d robotToCamera = new Transform3d(new Translation3d(), new Rotation3d());
+    Transform3d robotToFrontLeftCamera = new Transform3d(new Translation3d(), new Rotation3d());
+    Transform3d robotToFrontRightCamera = new Transform3d(new Translation3d(), new Rotation3d());
+    Transform3d robotToBackLeftCamera = new Transform3d(new Translation3d(), new Rotation3d());
+    Transform3d robotToBackRightCamera = new Transform3d(new Translation3d(), new Rotation3d());
 
     public VisionSubsystem (){
         try{
@@ -41,13 +48,18 @@ public class VisionSubsystem extends SubsystemBase {
             e.printStackTrace();
         }
 
-        frontLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
+        frontLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToFrontLeftCamera);
         frontLeftPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
-        frontRightPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
+
+        frontRightPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToFrontRightCamera);
         frontRightPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
-        backLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToCamera);
+
+        backLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToBackLeftCamera);
         backLeftPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
 
+        backRightPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToBackRightCamera);
+        backRightPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
+  
     }
 
     public Optional<EstimatedRobotPose> getFLEstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
@@ -65,6 +77,57 @@ public class VisionSubsystem extends SubsystemBase {
         }
         return Optional.empty();
     }
+
+    public Optional<EstimatedRobotPose> getFREstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
+         
+        if(frontRightCamera.isConnected()){
+            List<PhotonPipelineResult> unreadResults = frontRightCamera.getAllUnreadResults();
+            if (!unreadResults.isEmpty()) {
+                PhotonPipelineResult latestResult = unreadResults.get(unreadResults.size() - 1);
+                Optional<EstimatedRobotPose> frontRightCameraEstimate = frontRightPoseEstimator.estimateCoprocMultiTagPose(latestResult);
+                if(frontRightCameraEstimate.isPresent()) {
+                    return frontRightCameraEstimate;
+                }
+            }
+            return Optional.empty();
+        }
+        return Optional.empty();
+    }
+
+    public Optional<EstimatedRobotPose> getBLEstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
+         
+        if(backLeftCamera.isConnected()){
+            List<PhotonPipelineResult> unreadResults = backLeftCamera.getAllUnreadResults();
+            if (!unreadResults.isEmpty()) {
+                PhotonPipelineResult latestResult = unreadResults.get(unreadResults.size() - 1);
+                Optional<EstimatedRobotPose> backLeftCameraEstimate = backLeftPoseEstimator.estimateCoprocMultiTagPose(latestResult);
+                if(backLeftCameraEstimate.isPresent()) {
+                    return backLeftCameraEstimate;
+                }
+            }
+            return Optional.empty();
+        }
+        return Optional.empty();
+    }
+
+    public Optional<EstimatedRobotPose> getBREstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
+         
+        if(backRightCamera.isConnected()){
+            List<PhotonPipelineResult> unreadResults = backRightCamera.getAllUnreadResults();
+            if (!unreadResults.isEmpty()) {
+                PhotonPipelineResult latestResult = unreadResults.get(unreadResults.size() - 1);
+                Optional<EstimatedRobotPose> backRightCameraEstimate = backRightPoseEstimator.estimateCoprocMultiTagPose(latestResult);
+                if(backRightCameraEstimate.isPresent()) {
+                    return backRightCameraEstimate;
+                }
+            }
+            return Optional.empty();
+        }
+        return Optional.empty();
+    }
+
+    
+
 
     public void periodic() {
         
