@@ -12,6 +12,7 @@ import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -21,6 +22,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
@@ -72,6 +75,22 @@ public class RobotContainer {
     public final InstantCommand toggleHopper = new InstantCommand(()-> stateController.toggleHopper());
     public final InstantCommand toggleClimbRotate = new InstantCommand(()-> stateController.toggleClimbRotate());
     public final InstantCommand toggleClimbExtension = new InstantCommand(()-> stateController.toggleClimbExtension());   
+    public final InstantCommand resetPoseToHub = new InstantCommand(()->stateController.resetPoseToHub());
+    public final InstantCommand resetPoseToLeftTrench = new InstantCommand(()->stateController.resetPoseToLeftTrench());
+    public final InstantCommand resetPoseToRightTrench = new InstantCommand(()->stateController.resetPoseToRightTrench());
+    public final InstantCommand resetPoseToVisionEstimate = new InstantCommand(()->stateController.resetPoseToVisionEstimate());
+    
+    public final SequentialCommandGroup climbCommandGroup = new SequentialCommandGroup(
+                                new InstantCommand(()-> stateController.toggleClimbExtension())
+                                .andThen(new WaitCommand(1))
+                                .andThen(new InstantCommand(()-> stateController.toggleClimbRotate()))
+                                .andThen(new WaitCommand(2)
+                                .andThen(drivetrain.applyRequest(() ->
+                                            drive.withVelocityX(1) // Drive forward with negative Y (forward)
+                                                .withVelocityY(0) // Drive left with negative X (left)
+                                                .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+                                            )).withTimeout(2)
+                                .andThen(new InstantCommand(()-> stateController.toggleClimbExtension()))));
 
     public RobotContainer() {
         configureBindings();
@@ -88,45 +107,43 @@ public class RobotContainer {
                     .withRotationalRate(-driverController.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
-        driverController.povUp().whileTrue(
+        driverController.y().whileTrue(
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(-1) // Drive forward with negative Y (forward)
-                    .withVelocityY(0) // Drive left with negative X (left)
-                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+                facingAngle.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withTargetDirection(new Rotation2d(0)) // Drive counterclockwise with negative X (left)
             )
         );
-        driverController.povDown().whileTrue(
+        driverController.x().whileTrue(
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(1) // Drive forward with negative Y (forward)
-                    .withVelocityY(0) // Drive left with negative X (left)
-                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+                facingAngle.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withTargetDirection(new Rotation2d(Math.PI/2)) // Drive counterclockwise with negative X (left)
             )
         );
-        driverController.povLeft().whileTrue(
+        driverController.b().whileTrue(
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(0) // Drive forward with negative Y (forward)
-                    .withVelocityY(-1) // Drive left with negative X (left)
-                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+                facingAngle.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withTargetDirection(new Rotation2d(-Math.PI/2)) // Drive counterclockwise with negative X (left)
             )
         );
-        driverController.povRight().whileTrue(
+        driverController.a().whileTrue(
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(0) // Drive forward with negative Y (forward)
-                    .withVelocityY(1) // Drive left with negative X (left)
-                    .withRotationalRate(0) // Drive counterclockwise with negative X (left)
+                facingAngle.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withTargetDirection(new Rotation2d(Math.PI)) // Drive counterclockwise with negative X (left)
             )
         );
+
+
+
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
         RobotModeTriggers.disabled().whileTrue(
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
-
-        driverController.a().whileTrue(drivetrain.applyRequest(() -> brake));
-        driverController.b().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-driverController.getLeftY(), -driverController.getLeftX()))
-        ));
 
         // Run SysId routines when holding back/start and X/Y.
         // Note that each routine should be run exactly once in a single log.
@@ -136,12 +153,20 @@ public class RobotContainer {
         driverController.start().and(driverController.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         // reset the field-centric heading on left bumper press
-        driverController.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric())); // maybe remove this?
+//        driverController.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric())); // maybe remove this?
+
         driverController.leftTrigger().whileTrue(drivetrain.applyRequest(()-> // While left trigger is held, drive while maintain a heading facing the target
             facingAngle.withVelocityX(-driverController.getLeftY() * MaxSpeed)
                        .withVelocityY(-driverController.getLeftX() * MaxSpeed)
                        .withTargetDirection(stateController.calculateAngleToAim())
         ));
+
+        driverController.povUp().onTrue(resetPoseToHub);
+        driverController.povLeft().onTrue(resetPoseToLeftTrench);
+        driverController.povRight().onTrue(resetPoseToRightTrench);
+        driverController.povDown().onTrue(resetPoseToVisionEstimate);
+        driverController.rightBumper().onTrue(toggleClimbRotate);
+        driverController.rightTrigger().onTrue(toggleClimbExtension);
 
         drivetrain.registerTelemetry(logger::telemeterize);
         
@@ -152,20 +177,31 @@ public class RobotContainer {
         operatorController.leftBumper().onFalse(stopShooting);
         operatorController.a().onTrue(toggleIntake);
         operatorController.x().onTrue(toggleHopper);
-        driverController.rightBumper().onTrue(toggleClimbRotate);
-        driverController.rightTrigger().onTrue(toggleClimbExtension);
         
         registerNamedCommands();
         createAutos();
     }
     public void registerNamedCommands() {
-        NamedCommands.registerCommand("doNothing", new InstantCommand());
+        NamedCommands.registerCommand("resetRobot", resetRobot);
+        NamedCommands.registerCommand("doShooting", doShooting);
+        NamedCommands.registerCommand("stopShooting", stopShooting);
+        NamedCommands.registerCommand("doSimpleShooting", doSimpleShooting);
+        NamedCommands.registerCommand("toggleIntake", toggleIntake);
+        NamedCommands.registerCommand("toggleHopper", toggleHopper);
+        NamedCommands.registerCommand("climbCommandGroup", climbCommandGroup);
+        NamedCommands.registerCommand("resetPoseToHub", resetPoseToHub);
+        NamedCommands.registerCommand("resetPoseToLeftTrench", resetPoseToLeftTrench);
+        NamedCommands.registerCommand("resetPoseToRightTrench", resetPoseToRightTrench);
     }
     public void createAutos() {
         autoChooser.setDefaultOption("nothing", null);
 
-        autoChooser.addOption("Auto1", new PathPlannerAuto("Auto1"));
-        autoChooser.addOption("Auto2", new PathPlannerAuto("Auto2"));
+        autoChooser.addOption("C-SPL-CClimb", new PathPlannerAuto("C-SPL-CClimb"));
+        autoChooser.addOption("C-SPL-LClimb", new PathPlannerAuto("C-SPL-LClimb"));
+        autoChooser.addOption("C-SPL-RClimb", new PathPlannerAuto("C-SPL-RClimb"));
+        autoChooser.addOption("OL-SPL-LClimb", new PathPlannerAuto("OL-SPL-LClimb"));
+        autoChooser.addOption("OL-SPL-SDEP-LClimb", new PathPlannerAuto("OL-SPL-SDEP-LClimb"));
+        autoChooser.addOption("OR-SPL-RClimb", new PathPlannerAuto("OR-SPL-RClimb"));
 
         SmartDashboard.putData("autoChooser", autoChooser);
     }

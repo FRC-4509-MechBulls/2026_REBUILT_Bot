@@ -7,6 +7,9 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.PubSubOption;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -58,6 +61,9 @@ public class StateController extends SubsystemBase{
     boolean onBump;
 
     Alliance currentAlliance;
+    Pose2d knownHubPose;
+    Pose2d knownLeftTrenchPose;
+    Pose2d knownRightTrenchPose;
 
     public StateController(CommandSwerveDrivetrain drive, ClimbSubsystem climb, ShooterSubsystem shooter,
                            VisionSubsystem vision, IntakeSubsystem intake) {
@@ -88,6 +94,9 @@ public class StateController extends SubsystemBase{
             onBump = false;
 
             currentAlliance = Alliance.Blue;
+            knownHubPose = Constants.PoseConstants.knownBlueHubRobotPose;
+            knownLeftTrenchPose = Constants.PoseConstants.knownBlueLeftTrenchRobotPose;
+            knownRightTrenchPose = Constants.PoseConstants.knownBlueRightTrenchRobotPose;
    }
 
     // Shooter Methods
@@ -129,6 +138,22 @@ public class StateController extends SubsystemBase{
     }
     public void updateAlliance(Alliance alliance) {
         currentAlliance = alliance;
+        if(alliance == Alliance.Blue) {
+            knownHubPose = Constants.PoseConstants.knownBlueHubRobotPose;
+            knownLeftTrenchPose = Constants.PoseConstants.knownBlueLeftTrenchRobotPose;
+            knownRightTrenchPose = Constants.PoseConstants.knownBlueRightTrenchRobotPose;
+        } else {
+            knownHubPose = Constants.PoseConstants.knownRedHubRobotPose;
+            knownLeftTrenchPose = Constants.PoseConstants.knownRedLeftTrenchRobotPose;
+            knownRightTrenchPose = Constants.PoseConstants.knownRedRightTrenchRobotPose;
+        }
+    }
+    public Rotation2d getForwardXAngle() {
+        if(currentAlliance == Alliance.Blue) {
+            return Constants.DriveConstants.blueForwardX;
+        } else {
+            return Constants.DriveConstants.redForwardX;
+        }
     }
     public void addVisionMeasurement() {
         if(visionSubsystem.getFLEstimatedGlobalPose(currentPose).isPresent()){
@@ -139,9 +164,6 @@ public class StateController extends SubsystemBase{
         }
         if(visionSubsystem.getBLEstimatedGlobalPose(currentPose).isPresent()){
             drivetrain.addVisionMeasurement(visionSubsystem.getBLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
-        }
-        if(visionSubsystem.getBREstimatedGlobalPose(currentPose).isPresent()){
-            drivetrain.addVisionMeasurement(visionSubsystem.getBREstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
         }
     }
     public void updateCurrentTarget() {
@@ -260,6 +282,7 @@ public class StateController extends SubsystemBase{
     public void periodic() {
         addVisionMeasurement();
         updateHoodAngle();
+        detectBump();
         targetPoseField.setRobotPose(currentTargetPose);
         
         SmartDashboard.putNumber("CalculatedAngle", currentAngle);
@@ -271,6 +294,7 @@ public class StateController extends SubsystemBase{
         SmartDashboard.putString("CurrentTarget", currentTarget.toString());
         SmartDashboard.putString("CurrentZoneTarget", currentZoneTarget.toString());
         
+        resetPoseToVisionEstimate(); // test
     }
 
     // Robot Actions
@@ -309,7 +333,11 @@ public class StateController extends SubsystemBase{
         }
     }
     public void simpleShoot(boolean shoot) {
-        setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeed);
+        if(hopperExtended) {
+            setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeedHopperExtended);
+        } else {
+            setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeed);
+        }
         try {
             Thread.sleep(Constants.ShooterConstants.windUpTime);
         } catch (InterruptedException e) {
@@ -341,13 +369,29 @@ public class StateController extends SubsystemBase{
         }
     }
 
-    public void resetPoseToOrigin() {
-        Rotation2d currentRotation = drivetrain.getState().Pose.getRotation();
-    
-        drivetrain.resetPose(
-            new Pose2d(0.0, 0.0, currentRotation)
-        );
+    // Odometry Correction
+    public void resetPoseToLeftTrench() {
+        drivetrain.resetPose(knownLeftTrenchPose);
     }
-    
+    public void resetPoseToRightTrench() {
+        drivetrain.resetPose(knownRightTrenchPose);
+    }
+    public void resetPoseToHub() {
+        drivetrain.resetPose(knownHubPose);
+    }
+
+    public void resetPoseToVisionEstimate() {
+        Pose2d poseEstimate = null;
+        if(visionSubsystem.getFLEstimatedGlobalPose(currentPose).isPresent()) {
+            poseEstimate = visionSubsystem.getFLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d();
+        } else if(visionSubsystem.getFREstimatedGlobalPose(currentPose).isPresent()){
+            poseEstimate = visionSubsystem.getFREstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d();
+        } else if(visionSubsystem.getBLEstimatedGlobalPose(currentPose).isPresent()) {
+            poseEstimate = visionSubsystem.getBLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d();
+        }
+        if(poseEstimate != null){
+            drivetrain.resetPose(poseEstimate);
+        }
+    }
     
 }

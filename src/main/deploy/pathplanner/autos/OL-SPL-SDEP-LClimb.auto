@@ -1,0 +1,121 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "(OL-CL)"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "doShooting"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 3.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "stopShooting"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "(CL-Dep)"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "toggleIntake"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 2.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "toggleIntake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "(Dep-CL)"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "doShooting"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "toggleHopper"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 2.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "stopShooting"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "(CL-LClimb)"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 3.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "climbCommandGroup"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

@@ -1,0 +1,49 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "named",
+          "data": {
+            "name": "doSimpleShooting"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 5.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "stopShooting"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "(C-CClimb)"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 3.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "climbCommandGroup"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": "C",
+  "choreoAuto": false
+}

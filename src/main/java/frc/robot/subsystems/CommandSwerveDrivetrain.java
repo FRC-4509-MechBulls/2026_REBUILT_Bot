@@ -29,7 +29,7 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-
+import frc.robot.Constants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 
 /**
@@ -228,8 +228,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
-    Rotation2d targetAngle = new Rotation2d(0);
-
     @Override
     public void periodic() {
         /*
@@ -250,19 +248,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             });
         }
 
-        Pose2d targetPose = new Pose2d(new Translation2d(4.626,4.026), new Rotation2d(0));
-
-        double dx = targetPose.getX() - this.getState().Pose.getX();
-        double dy = targetPose.getY() - this.getState().Pose.getY();
-
-        Rotation2d angle = new Rotation2d(Math.atan2(dy,dx));
-
-        targetAngle = angle.rotateBy(new Rotation2d(Units.degreesToRadians(180)));
-
-    }
-
-    public Rotation2d returnTargetAngle(){
-        return targetAngle;
     }
 
     private void startSimThread() {
@@ -330,9 +315,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 ),
                 new PPHolonomicDriveController(
                     // PID constants for translation
-                    new PIDConstants(5, 0, 0),
+                    new PIDConstants(Constants.DriveConstants.autonTranslationkP, Constants.DriveConstants.autonTranslationkI, Constants.DriveConstants.autonTranslationkD),
                     // PID constants for rotation
-                    new PIDConstants(5, 0, 0)
+                    new PIDConstants(Constants.DriveConstants.autonRotationkP, Constants.DriveConstants.autonRotationkI, Constants.DriveConstants.autonRotationkD)
                 ),
                 config,
                 // Assume the path needs to be flipped for Red vs Blue, this is normally the case
