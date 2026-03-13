@@ -12,6 +12,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -35,15 +36,13 @@ public class IntakeSubsystem extends SubsystemBase{
     double lastPosition;
     double currentSpeed;
 
-    // Testing
-    double debugSpeed = 0; 
-    double extensionkP = 0;
-    double extensionkI = 0;
-    double extensionkD = 0;
+    double intakeWheelSpeed;
+
+    XboxController controller = new XboxController(1);
 
     public IntakeSubsystem() {
 
-        // Motor Intialization
+        // Motor Initialization
         leftMotor = new SparkMax(Constants.IntakeConstants.leftMotorID, MotorType.kBrushless);
         rightMotor = new SparkMax(Constants.IntakeConstants.rightMotorID, MotorType.kBrushless);
         intakeMotor = new TalonFX(Constants.IntakeConstants.wheelMotorID);
@@ -56,6 +55,7 @@ public class IntakeSubsystem extends SubsystemBase{
             sparkMaxConfig.voltageCompensation(12);
         leftMotor.configure(sparkMaxConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         rightMotor.configure(sparkMaxConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        
         talonFXConfiguration = new TalonFXConfiguration()
                                     .withCurrentLimits(new CurrentLimitsConfigs()
                                                         .withStatorCurrentLimit(40)
@@ -72,11 +72,7 @@ public class IntakeSubsystem extends SubsystemBase{
         lastPosition = intakeExtensionEncoder.get();
         currentSpeed = 0;
 
-        // Testing
-        SmartDashboard.putNumber("DebugIntakeSpeed", debugSpeed);
-        SmartDashboard.putNumber("HopperExtensionkP", extensionkP);
-        SmartDashboard.putNumber("HopperExtensionkI", extensionkI);
-        SmartDashboard.putNumber("HopperExtensionkD", extensionkD);
+        intakeWheelSpeed = Constants.IntakeConstants.intakeWheelSpeed;
         SmartDashboard.putNumber("DesiredHopperExtension", desiredPosition);
 
     }
@@ -84,28 +80,30 @@ public class IntakeSubsystem extends SubsystemBase{
     @Override
     public void periodic(){
 
-        currentPosition = getContinuousPosition();
-        setMotors(extensionController.calculate(currentPosition, desiredPosition));
+  //      setMotors(extensionController.calculate(getContinuousPosition(), desiredPosition));
 
-        // Testing
-        debugSpeed = SmartDashboard.getNumber("DebugIntakeSpeed", 0);
-        desiredPosition = SmartDashboard.getNumber("DesiredHopperExtension", 0);
-        extensionController.setPID(
-                            SmartDashboard.getNumber("HopperExtensionkP", 0),
-                            SmartDashboard.getNumber("HopperExtensionkI", 0), 
-                            SmartDashboard.getNumber("HopperExtensionkD", 0)
-                            );
+        SmartDashboard.putNumber("IntakePosition", getContinuousPosition());
+        
+        // Debug
+        
+        
+
+        
+    }
+
+    public void controlIntake(double leftY, double rightY){
+        intakeMotor.set(rightY);
+        setMotors(leftY*6);
     }
 
     public void setMotors(double speed){
-        leftMotor.set(speed);
-        rightMotor.set(-speed);
+        leftMotor.setVoltage(speed);
+        rightMotor.setVoltage(-speed);
     }
 
     public void intake(boolean intake){
         if(intake){
-            //intakeMotor.set(Constants.IntakeConstants.intakeWheelSpeed);
-            intakeMotor.set(debugSpeed);
+            intakeMotor.set(intakeWheelSpeed);
         } else {
             intakeMotor.set(0);
         }

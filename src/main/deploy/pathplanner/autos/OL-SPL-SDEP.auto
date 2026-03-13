@@ -13,19 +13,55 @@
         {
           "type": "named",
           "data": {
+            "name": "reverseIndexer"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
             "name": "doShooting"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 3.0
+            "waitTime": 2.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "loadIndexer"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 5.0
           }
         },
         {
           "type": "named",
           "data": {
             "name": "stopShooting"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "stopIndexer"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "extendHopper"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "startIntake"
           }
         },
         {
@@ -37,25 +73,13 @@
         {
           "type": "wait",
           "data": {
-            "waitTime": 1.0
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "toggleIntake"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
             "waitTime": 2.0
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "toggleIntake"
+            "name": "stopIntake"
           }
         },
         {
@@ -67,19 +91,13 @@
         {
           "type": "named",
           "data": {
-            "name": "doShooting"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 1.0
+            "name": "reverseIndexer"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "toggleHopper"
+            "name": "doShooting"
           }
         },
         {
@@ -91,25 +109,25 @@
         {
           "type": "named",
           "data": {
-            "name": "stopShooting"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "(CL-LClimb)"
+            "name": "loadIndexer"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 3.0
+            "waitTime": 5.0
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "climbCommandGroup"
+            "name": "stopShooting"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "stopIndexer"
           }
         }
       ]

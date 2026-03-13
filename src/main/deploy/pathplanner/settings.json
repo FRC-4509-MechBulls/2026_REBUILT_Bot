@@ -4,11 +4,14 @@
   "holonomicMode": true,
   "pathFolders": [
     "C",
+    "NZ",
     "OL",
     "OR"
   ],
   "autoFolders": [
-    "C"
+    "C",
+    "NZ-SAZ",
+    "NZ-AZ-S"
   ],
   "defaultMaxVel": 3.0,
   "defaultMaxAccel": 3.0,

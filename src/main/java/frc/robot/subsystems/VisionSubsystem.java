@@ -29,24 +29,19 @@ import frc.robot.Constants;
 public class VisionSubsystem extends SubsystemBase {
 
     AprilTagFieldLayout aprilTagFieldLayout;
-    PhotonCamera frontLeftCamera = new PhotonCamera("frontLeftCamera");
-    PhotonCamera frontRightCamera = new PhotonCamera("frontRightCamera");
-    PhotonCamera backLeftCamera = new PhotonCamera("backLeftCamera");
+    PhotonCamera frontRightCamera = new PhotonCamera("FrontRightCamera");
+    PhotonCamera backLeftCamera = new PhotonCamera("BackLeftCamera");
 
-    PhotonPoseEstimator frontLeftPoseEstimator;
     PhotonPoseEstimator frontRightPoseEstimator;
     PhotonPoseEstimator backLeftPoseEstimator;
 
-    Transform3d robotToFrontLeftCamera = Constants.VisionConstants.robotToFrontLeftCamera;
     Transform3d robotToFrontRightCamera = Constants.VisionConstants.robotToFrontRightCamera;
     Transform3d robotToBackLeftCamera = Constants.VisionConstants.robotToBackLeftCamera;
 
-    Field2d frontLeftEstimatePose;
     Field2d frontRightEstimatePose;
     Field2d backLeftEstimatePose;
 
     // Testing camera transforms
-    // StructPublisher<Pose3d> flCameraPublisher = NetworkTableInstance.getDefault().getStructTopic("flCameraPose", Pose3d.struct).publish(PubSubOption.sendAll(false));
     // StructPublisher<Pose3d> frCameraPublisher = NetworkTableInstance.getDefault().getStructTopic("frCameraPose", Pose3d.struct).publish(PubSubOption.sendAll(false));
     // StructPublisher<Pose3d> blCameraPublisher = NetworkTableInstance.getDefault().getStructTopic("blCameraPose", Pose3d.struct).publish(PubSubOption.sendAll(false));
 
@@ -57,37 +52,17 @@ public class VisionSubsystem extends SubsystemBase {
             e.printStackTrace();
         }
 
-        frontLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToFrontLeftCamera);
-        frontLeftPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
         frontRightPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToFrontRightCamera);
         frontRightPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
         backLeftPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, robotToBackLeftCamera);
         backLeftPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.AVERAGE_BEST_TARGETS);
 
-        frontLeftEstimatePose = new Field2d();
         frontRightEstimatePose = new Field2d();
         backLeftEstimatePose = new Field2d();
 
-        SmartDashboard.putData(frontLeftEstimatePose);
         SmartDashboard.putData(frontRightEstimatePose);
         SmartDashboard.putData(backLeftEstimatePose);
        
-    }
-
-    public Optional<EstimatedRobotPose> getFLEstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
-        if(frontLeftCamera.isConnected()){
-            List<PhotonPipelineResult> unreadResults = frontLeftCamera.getAllUnreadResults();
-            if (!unreadResults.isEmpty()) {
-                PhotonPipelineResult latestResult = unreadResults.get(unreadResults.size() - 1);
-                Optional<EstimatedRobotPose> frontLeftCameraEstimate = frontLeftPoseEstimator.estimateCoprocMultiTagPose(latestResult);
-                if(frontLeftCameraEstimate.isPresent()) {
-                    frontLeftEstimatePose.setRobotPose(frontLeftCameraEstimate.get().estimatedPose.toPose2d());
-                    return frontLeftCameraEstimate;
-                }
-            }
-            return Optional.empty();
-        }
-        return Optional.empty();
     }
     public Optional<EstimatedRobotPose> getFREstimatedGlobalPose(Pose2d prevEstimatedRobotPose) { 
         if(frontRightCamera.isConnected()){
@@ -121,7 +96,6 @@ public class VisionSubsystem extends SubsystemBase {
     }
 
     public void periodic() {
-        // flCameraPublisher.set(new Pose3d().plus(Constants.VisionConstants.robotToFrontLeftCamera));
         // frCameraPublisher.set(new Pose3d().plus(Constants.VisionConstants.robotToFrontRightCamera));
         // blCameraPublisher.set(new Pose3d().plus(Constants.VisionConstants.robotToBackLeftCamera));
     }

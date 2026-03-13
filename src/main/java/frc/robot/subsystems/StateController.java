@@ -1,8 +1,12 @@
 package frc.robot.subsystems;
 
+import java.util.Optional;
+
 import org.littletonrobotics.junction.Logger;
+import org.photonvision.EstimatedRobotPose;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -53,6 +57,7 @@ public class StateController extends SubsystemBase{
     ZoneTargets currentZoneTarget;
     Pose2d currentTargetPose;
     double currentAngle;
+    double shotDampener;
 
     boolean intaking;
     boolean hopperExtended;
@@ -64,6 +69,9 @@ public class StateController extends SubsystemBase{
     Pose2d knownHubPose;
     Pose2d knownLeftTrenchPose;
     Pose2d knownRightTrenchPose;
+
+    StructPublisher<Pose3d> frCameraPublisher;
+    StructPublisher<Pose3d> blCameraPublisher;
 
     public StateController(CommandSwerveDrivetrain drive, ClimbSubsystem climb, ShooterSubsystem shooter,
                            VisionSubsystem vision, IntakeSubsystem intake) {
@@ -80,6 +88,7 @@ public class StateController extends SubsystemBase{
             currentTarget = Targets.HUB;
             currentZoneTarget = ZoneTargets.BLUE_ALLIANCE_1;
             currentTargetPose = new Pose2d();
+            shotDampener = Constants.ShooterConstants.shotRPMDampener;
 
             targetPoseField = new Field2d();
             targetPoseField.setRobotPose(targetPose);
@@ -97,6 +106,9 @@ public class StateController extends SubsystemBase{
             knownHubPose = Constants.PoseConstants.knownBlueHubRobotPose;
             knownLeftTrenchPose = Constants.PoseConstants.knownBlueLeftTrenchRobotPose;
             knownRightTrenchPose = Constants.PoseConstants.knownBlueRightTrenchRobotPose;
+
+            frCameraPublisher = NetworkTableInstance.getDefault().getStructTopic("frCameraPose", Pose3d.struct).publish(PubSubOption.sendAll(false));
+            blCameraPublisher = NetworkTableInstance.getDefault().getStructTopic("blCameraPose", Pose3d.struct).publish(PubSubOption.sendAll(false));
    }
 
     // Shooter Methods
@@ -156,15 +168,33 @@ public class StateController extends SubsystemBase{
         }
     }
     public void addVisionMeasurement() {
-        if(visionSubsystem.getFLEstimatedGlobalPose(currentPose).isPresent()){
-            drivetrain.addVisionMeasurement(visionSubsystem.getFLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
-        }
-        if(visionSubsystem.getFREstimatedGlobalPose(currentPose).isPresent()){
-            drivetrain.addVisionMeasurement(visionSubsystem.getFREstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
-        }
-        if(visionSubsystem.getBLEstimatedGlobalPose(currentPose).isPresent()){
-            drivetrain.addVisionMeasurement(visionSubsystem.getBLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d(), Timer.getFPGATimestamp());
-        }
+        Optional<EstimatedRobotPose> frEstimate = visionSubsystem.getFREstimatedGlobalPose(currentPose);
+            if (frEstimate.isPresent()) {
+
+                EstimatedRobotPose estimate = frEstimate.get();
+
+                if(estimate.estimatedPose != null){
+                    frCameraPublisher.set((estimate.estimatedPose));
+                    drivetrain.addVisionMeasurement(
+                    estimate.estimatedPose.toPose2d(),
+                    Timer.getFPGATimestamp()
+                );
+                }
+            }
+
+         Optional<EstimatedRobotPose> blEstimate = visionSubsystem.getBLEstimatedGlobalPose(currentPose);
+            if (blEstimate.isPresent()) {
+
+                EstimatedRobotPose estimate = blEstimate.get();
+
+                if(estimate.estimatedPose != null){
+                    frCameraPublisher.set((estimate.estimatedPose));
+                    drivetrain.addVisionMeasurement(
+                    estimate.estimatedPose.toPose2d(),
+                    Timer.getFPGATimestamp()
+                );
+                }
+            }
     }
     public void updateCurrentTarget() {
         if(currentAlliance == Alliance.Blue) {
@@ -188,10 +218,10 @@ public class StateController extends SubsystemBase{
         }
     }
     public Pose2d predictFutureHubPose() {        
-        return new Pose2d(hubOffsetUtil.predictFutureLocation(calculateFlywheelSpeed(), currentAlliance), new Rotation2d());
+        return new Pose2d(hubOffsetUtil.predictFutureLocation(calculateFlywheelSpeed(), currentAlliance, shooterSubsystem.getCurrentHoodAngle()), new Rotation2d());
     }
     public Pose2d predictFutureTargetPose() {        
-        return new Pose2d(targetOffsetUtil.predictFutureLocation(calculateFlywheelSpeed(), currentAlliance), new Rotation2d());
+        return new Pose2d(targetOffsetUtil.predictFutureLocation(calculateFlywheelSpeed(), currentAlliance, shooterSubsystem.getCurrentHoodAngle()), new Rotation2d());
     }
     public Rotation2d calculateAngleToAim() {
 
@@ -241,29 +271,97 @@ public class StateController extends SubsystemBase{
         
         return angle.rotateBy(new Rotation2d(Units.degreesToRadians(180)));
     }
+    public double calculateHoodAngle() {
+        if(currentTarget.equals(Targets.HUB)){
+  //          double distance = distanceToTarget();
+  //          double distance = 0;
+
+  //          double hoodAngle = Constants.ShooterConstants.maxHoodAngle - 
+  //                              ((distance-Constants.ShooterConstants.minDistance)
+  //                              /(Constants.ShooterConstants.maxDistance - Constants.ShooterConstants.minDistance))
+  //                              * (Constants.ShooterConstants.maxHoodAngle - Constants.ShooterConstants.minHoodAngle);
+        
+  //          return hoodAngle;
+        return Units.degreesToRadians(30);
+        } 
+        return Units.degreesToRadians(30);
+    }
     public double calculateFlywheelSpeed() {
 
-        // use a linear regression model for experiment data points that graph horizontal distance (x)
-        // from hub vs the required motor speed to consistently score fuel
+        double G = 9.81;
+        double distance = distanceToTarget();
+        double hoodAngle = calculateHoodAngle();
 
-        return 10; 
+        double v = Math.sqrt((distance * G)/Math.sin(2*hoodAngle));
+        SmartDashboard.putNumber("CalculatedDistanceToTarget", distance);
+        return v; 
     }
-    public double calculateFuelExitVelocity() {
-        // should be some fraction of the flywheel speed
+    public double calculateShooterMotorSpeed(double velocity) {
 
-        return 10;
+            double[] velocities = Constants.ShooterConstants.correspondingExitVelocity;
+            double[] outputs = Constants.ShooterConstants.correspondingMotorOutput;
+
+            double v1 = 0;
+            double v2 = 0;
+            double m1 = 0;
+            double m2 = 0;
+
+            for(int i = 0; i < velocities.length-1; i++){
+                if(velocities[i] <= velocity && velocity <= velocities[i+1]){
+                    v1 = velocities[i];
+                    v2 = velocities[i+1];
+                    m1 = outputs[i];
+                    m2 = outputs[i+1];
+
+                    return m1 + ((velocity - v1) / (v2-v1)) * (m2 - m1);
+                }
+            }
+        
+        return 0;
     }
-    public void updateHoodAngle() {
-        if(currentTarget.equals(Targets.ALLIANCE_ZONE) || currentTarget.equals(Targets.NEUTRAL_ZONE)) {
-            setHoodAngle(Constants.ShooterConstants.hoodAngle1);
+    public double distanceToTarget() {
+        double distance = 0;
+        Pose2d targetPose;
+
+         if(currentTarget.equals(Targets.HUB)) {
+            if(currentAlliance == Alliance.Blue){
+                targetPose = Constants.PoseConstants.blueHub;
+            } else {
+                targetPose = Constants.PoseConstants.redHub;
+            }
+
+            double dx = (AllianceFlipUtil.applyX(targetPose.getX()) - AllianceFlipUtil.applyX(drivetrain.getState().Pose.getX()));
+            double dy = AllianceFlipUtil.applyY(targetPose.getY()) - AllianceFlipUtil.applyY(drivetrain.getState().Pose.getY());
+
+            distance = Math.hypot(dx, dy);
         } else {
-            setHoodAngle(Constants.ShooterConstants.hoodAngle2);
+            if(currentAlliance == Alliance.Blue){
+            if(drivetrain.getState().Pose.getY() < 4.035) {
+                targetPose = Constants.PoseConstants.blueAlliance1;
+            } else{
+                targetPose = Constants.PoseConstants.blueAlliance2;
+            }
+        } else {
+            if(drivetrain.getState().Pose.getY() < 4.035) {
+                targetPose = Constants.PoseConstants.redAlliance1;
+            } else{
+                targetPose = Constants.PoseConstants.redAlliance2;
+            }
         }
+
+            double dx = (AllianceFlipUtil.applyX(targetPose.getX()) - AllianceFlipUtil.applyX(drivetrain.getState().Pose.getX()));
+            double dy = AllianceFlipUtil.applyY(targetPose.getY()) - AllianceFlipUtil.applyY(drivetrain.getState().Pose.getY());
+
+            distance = Math.hypot(dx, dy);
+        }
+
+        return distance;
+        
     }
     public void detectBump() {
 
-        double robotRoll = drivetrain.getPigeon2().getRoll().getValueAsDouble();
-        double robotPitch = drivetrain.getPigeon2().getPitch().getValueAsDouble();
+        double robotRoll = drivetrain.getPigeon2().getRoll(true).getValueAsDouble();
+        double robotPitch = drivetrain.getPigeon2().getPitch(true).getValueAsDouble();
         double currentRobotVelocityX = drivetrain.getState().Speeds.vxMetersPerSecond; // if > 0, moving toward +x
          
         if(!onBump && (Math.abs(robotRoll) > 12 || Math.abs(robotPitch) > 12)) {
@@ -280,9 +378,8 @@ public class StateController extends SubsystemBase{
 
     }
     public void periodic() {
-        addVisionMeasurement();
-        updateHoodAngle();
-        detectBump();
+   //     addVisionMeasurement();
+   //     updateHoodAngle();
         targetPoseField.setRobotPose(currentTargetPose);
         
         SmartDashboard.putNumber("CalculatedAngle", currentAngle);
@@ -294,15 +391,12 @@ public class StateController extends SubsystemBase{
         SmartDashboard.putString("CurrentTarget", currentTarget.toString());
         SmartDashboard.putString("CurrentZoneTarget", currentZoneTarget.toString());
         
-        resetPoseToVisionEstimate(); // test
     }
 
     // Robot Actions
     public void toggleIntake() {
         if(!intaking){
-            setIntakePosition(Constants.IntakeConstants.extendedPosition);
             setIntakeWheels(true);
-            hopperExtended = true;
             intaking = true;
         } else {
             setIntakeWheels(false);
@@ -320,30 +414,21 @@ public class StateController extends SubsystemBase{
     }
     public void shoot(boolean shoot) {
         if(shoot){
-            setShooterSpeed(calculateFlywheelSpeed());
-            try {
-                Thread.sleep(Constants.ShooterConstants.windUpTime);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            setIndexer(true);
+            setShooterSpeed(calculateShooterMotorSpeed(calculateFlywheelSpeed() * shotDampener));
+  //          setHoodAngle(calculateHoodAngle());
+            SmartDashboard.putNumber("CalculatedFlywheelOutput", calculateShooterMotorSpeed(calculateFlywheelSpeed() * shotDampener));
+            SmartDashboard.putNumber("CalculatedFlywheelVelocityScaled", calculateFlywheelSpeed()*shotDampener);
         } else{
             setShooterSpeed(0);
-            setIndexer(false);
         }
     }
     public void simpleShoot(boolean shoot) {
         if(hopperExtended) {
             setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeedHopperExtended);
+            setHoodAngle(Constants.ShooterConstants.simpleShootingAngle);
         } else {
             setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeed);
         }
-        try {
-            Thread.sleep(Constants.ShooterConstants.windUpTime);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        setIndexer(true);
     }
     public void toggleClimbRotate() {
         if(!climbRotated) {
@@ -382,9 +467,7 @@ public class StateController extends SubsystemBase{
 
     public void resetPoseToVisionEstimate() {
         Pose2d poseEstimate = null;
-        if(visionSubsystem.getFLEstimatedGlobalPose(currentPose).isPresent()) {
-            poseEstimate = visionSubsystem.getFLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d();
-        } else if(visionSubsystem.getFREstimatedGlobalPose(currentPose).isPresent()){
+        if(visionSubsystem.getFREstimatedGlobalPose(currentPose).isPresent()){
             poseEstimate = visionSubsystem.getFREstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d();
         } else if(visionSubsystem.getBLEstimatedGlobalPose(currentPose).isPresent()) {
             poseEstimate = visionSubsystem.getBLEstimatedGlobalPose(currentPose).get().estimatedPose.toPose2d();

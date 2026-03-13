@@ -5,6 +5,7 @@ import frc.robot.Constants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.util.Units;
 
 public class HubOffsetUtil {
 
@@ -20,18 +21,19 @@ public class HubOffsetUtil {
         this.drivetrain = drivetrain;
     }
 
-    public double calculateAirtime(double exitVelocityX, Alliance alliance, Translation2d defaultLocation) {
+    public double calculateAirtime(double exitVelocity, Alliance alliance, Translation2d defaultLocation, double hoodAngle) {
 
         double distance = Math.hypot(
             defaultLocation.getX() - drivetrain.getState().Pose.getX(),
             defaultLocation.getY() - drivetrain.getState().Pose.getY()
             );
+        double exitVelocityX = exitVelocity * Math.cos(Units.degreesToRadians(hoodAngle));
         double airtime = distance/exitVelocityX;
 
         return airtime;
     }
 
-    public Translation2d predictFutureLocation(double exitVelocityX, Alliance alliance) {
+    public Translation2d predictFutureLocation(double exitVelocity, Alliance alliance, double hoodAngle) {
 
         
         Translation2d defaultLocation;
@@ -42,7 +44,7 @@ public class HubOffsetUtil {
         }
 
         ChassisSpeeds driveSpeed = drivetrain.getState().Speeds;
-        double airtime = calculateAirtime(exitVelocityX, alliance, defaultLocation);
+        double airtime = calculateAirtime(exitVelocity, alliance, defaultLocation, hoodAngle);
 
         Translation2d distanceMoved = new Translation2d(
             (-driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),

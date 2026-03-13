@@ -21,13 +21,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.ClimbSubsystem;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -44,19 +44,28 @@ public class RobotContainer {
 
     /* Setting up bindings for necessary control of the swerve drive platform */
     private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
-            .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
+            .withDeadband(MaxSpeed * 0.2).withRotationalDeadband(MaxAngularRate * 0.2) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
+    private SwerveRequest.RobotCentric robotCentricDrive = new SwerveRequest.RobotCentric();
+
+
+
+
+
+
     private final SwerveRequest.FieldCentricFacingAngle facingAngle = new SwerveRequest.FieldCentricFacingAngle()
-            .withDeadband(MaxSpeed*0.1).withRotationalDeadband(MaxAngularRate * 0.1)
+            .withDeadband(MaxSpeed*0.2).withRotationalDeadband(MaxAngularRate * 0.2)
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage).withHeadingPID(Constants.DriveConstants.aimkP, Constants.DriveConstants.aimkI, Constants.DriveConstants.aimkD);
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
     private final CommandXboxController driverController = new CommandXboxController(0);
     private final CommandXboxController operatorController = new CommandXboxController(1);
+
+    private final CommandXboxController debugController = new CommandXboxController(2);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     public final VisionSubsystem vision = new VisionSubsystem();
@@ -71,14 +80,35 @@ public class RobotContainer {
     public final InstantCommand doShooting = new InstantCommand(()-> stateController.shoot(true));
     public final InstantCommand stopShooting = new InstantCommand(()-> stateController.shoot(false));    
     public final InstantCommand doSimpleShooting = new InstantCommand(()-> stateController.simpleShoot(true));
-    public final InstantCommand toggleIntake = new InstantCommand(()-> stateController.toggleIntake());   
-    public final InstantCommand toggleHopper = new InstantCommand(()-> stateController.toggleHopper());
+    public final InstantCommand loadIndexer = new InstantCommand(()->shooter.setIndexer(true));
+    public final InstantCommand stopIndexer = new InstantCommand(()->shooter.setIndexer(false));
+    public final InstantCommand reverseIndexer = new InstantCommand(()->shooter.reverseIndexer());
+
+    public final Command startIntake = new InstantCommand(()-> intake.intake(true), intake);   
+    public final Command stopIntake = new InstantCommand(()-> intake.intake(false), intake);   
+
+    public final Command extendHopper =
+        new RunCommand(() -> intake.setMotors(-4), intake)
+            .withTimeout(1.5)
+            .andThen(new InstantCommand(() -> intake.setMotors(0), intake));
+
+    public final Command retractHopper =
+        new RunCommand(() -> intake.setMotors(4), intake)
+            .withTimeout(1.5)
+            .andThen(new InstantCommand(() -> intake.setMotors(0), intake));
+
     public final InstantCommand toggleClimbRotate = new InstantCommand(()-> stateController.toggleClimbRotate());
     public final InstantCommand toggleClimbExtension = new InstantCommand(()-> stateController.toggleClimbExtension());   
     public final InstantCommand resetPoseToHub = new InstantCommand(()->stateController.resetPoseToHub());
     public final InstantCommand resetPoseToLeftTrench = new InstantCommand(()->stateController.resetPoseToLeftTrench());
     public final InstantCommand resetPoseToRightTrench = new InstantCommand(()->stateController.resetPoseToRightTrench());
     public final InstantCommand resetPoseToVisionEstimate = new InstantCommand(()->stateController.resetPoseToVisionEstimate());
+    
+    public final Command travelOverBumpTimed = drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2) 
+                .withVelocityY(0) 
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime);
     
     public final SequentialCommandGroup climbCommandGroup = new SequentialCommandGroup(
                                 new InstantCommand(()-> stateController.toggleClimbExtension())
@@ -99,7 +129,7 @@ public class RobotContainer {
     private void configureBindings() {
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
-        drivetrain.setDefaultCommand(
+         drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
             drivetrain.applyRequest(() ->
                 drive.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
@@ -107,6 +137,15 @@ public class RobotContainer {
                     .withRotationalRate(-driverController.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
+
+        driverController.rightTrigger().whileTrue(
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(-driverController.getLeftY() * MaxSpeed/2) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driverController.getLeftX() * MaxSpeed/2) // Drive left with negative X (left)
+                    .withRotationalRate(-driverController.getRightX() * MaxAngularRate/2) // Drive counterclockwise with negative X (left)
+            )
+        );
+
         driverController.y().whileTrue(
             drivetrain.applyRequest(() ->
                 facingAngle.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
@@ -147,13 +186,10 @@ public class RobotContainer {
 
         // Run SysId routines when holding back/start and X/Y.
         // Note that each routine should be run exactly once in a single log.
-        driverController.back().and(driverController.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        driverController.back().and(driverController.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-        driverController.start().and(driverController.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-        driverController.start().and(driverController.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
-
-        // reset the field-centric heading on left bumper press
-//        driverController.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric())); // maybe remove this?
+//        driverController.back().and(driverController.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+//        driverController.back().and(driverController.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+//        driverController.start().and(driverController.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+//        driverController.start().and(driverController.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         driverController.leftTrigger().whileTrue(drivetrain.applyRequest(()-> // While left trigger is held, drive while maintain a heading facing the target
             facingAngle.withVelocityX(-driverController.getLeftY() * MaxSpeed)
@@ -165,19 +201,29 @@ public class RobotContainer {
         driverController.povLeft().onTrue(resetPoseToLeftTrench);
         driverController.povRight().onTrue(resetPoseToRightTrench);
         driverController.povDown().onTrue(resetPoseToVisionEstimate);
-        driverController.rightBumper().onTrue(toggleClimbRotate);
-        driverController.rightTrigger().onTrue(toggleClimbExtension);
+
+        // Testing
+        driverController.leftBumper().onTrue(travelOverBumpTimed);
 
         drivetrain.registerTelemetry(logger::telemeterize);
         
         operatorController.b().onTrue(resetRobot);
-        operatorController.leftTrigger().onTrue(doShooting);
-        operatorController.leftTrigger().onFalse(stopShooting);
-        operatorController.leftBumper().onTrue(doSimpleShooting);
-        operatorController.leftBumper().onFalse(stopShooting);
-        operatorController.a().onTrue(toggleIntake);
-        operatorController.x().onTrue(toggleHopper);
+        operatorController.leftTrigger().whileTrue(doShooting);
+        operatorController.leftTrigger().whileFalse(stopShooting);
+        operatorController.x().whileTrue(new InstantCommand(()->shooter.setIndexer(true)));
+        operatorController.y().whileFalse(new InstantCommand(()->shooter.reverseIndexer()));        
+        operatorController.rightTrigger().whileTrue(doSimpleShooting);
+        operatorController.rightTrigger().whileFalse(stopShooting);
+        operatorController.a().whileTrue(startIntake);
+        operatorController.leftBumper().onTrue(extendHopper);
+        operatorController.rightBumper().onTrue(retractHopper);
         
+        intake.setDefaultCommand(new InstantCommand(()-> intake.controlIntake(operatorController.getLeftY(), operatorController.getRightY()), intake));
+
+        debugController.x().whileTrue(new InstantCommand(()-> stateController.setIndexer(true)));
+        debugController.a().whileTrue(new InstantCommand(()-> stateController.setIntakeWheels(true)));
+        debugController.rightTrigger().whileTrue(new InstantCommand(()-> stateController.setShooterSpeed(debugController.getRightTriggerAxis())));
+
         registerNamedCommands();
         createAutos();
     }
@@ -186,23 +232,61 @@ public class RobotContainer {
         NamedCommands.registerCommand("doShooting", doShooting);
         NamedCommands.registerCommand("stopShooting", stopShooting);
         NamedCommands.registerCommand("doSimpleShooting", doSimpleShooting);
-        NamedCommands.registerCommand("toggleIntake", toggleIntake);
-        NamedCommands.registerCommand("toggleHopper", toggleHopper);
+        NamedCommands.registerCommand("startIntake", startIntake);
+        NamedCommands.registerCommand("stopIntake", stopIntake);
+        NamedCommands.registerCommand("extendHopper", extendHopper);
+        NamedCommands.registerCommand("retractHopper", retractHopper);
         NamedCommands.registerCommand("climbCommandGroup", climbCommandGroup);
         NamedCommands.registerCommand("resetPoseToHub", resetPoseToHub);
         NamedCommands.registerCommand("resetPoseToLeftTrench", resetPoseToLeftTrench);
         NamedCommands.registerCommand("resetPoseToRightTrench", resetPoseToRightTrench);
+        NamedCommands.registerCommand("loadIndexer", loadIndexer);
+        NamedCommands.registerCommand("stopIndexer", stopIndexer);
+        NamedCommands.registerCommand("reverseIndexer", reverseIndexer);
     }
     public void createAutos() {
         autoChooser.setDefaultOption("nothing", null);
 
-        autoChooser.addOption("C-SPL-CClimb", new PathPlannerAuto("C-SPL-CClimb"));
-        autoChooser.addOption("C-SPL-LClimb", new PathPlannerAuto("C-SPL-LClimb"));
-        autoChooser.addOption("C-SPL-RClimb", new PathPlannerAuto("C-SPL-RClimb"));
-        autoChooser.addOption("OL-SPL-LClimb", new PathPlannerAuto("OL-SPL-LClimb"));
-        autoChooser.addOption("OL-SPL-SDEP-LClimb", new PathPlannerAuto("OL-SPL-SDEP-LClimb"));
-        autoChooser.addOption("OR-SPL-RClimb", new PathPlannerAuto("OR-SPL-RClimb"));
+//        autoChooser.addOption("C-SPL-RClimb", new PathPlannerAuto("C-SPL"));
+        autoChooser.addOption("OL-SPL", new PathPlannerAuto("OL-SPL"));
+        autoChooser.addOption("OL-SPL-SDEP", new PathPlannerAuto("OL-SPL-SDEP"));
+        autoChooser.addOption("OR-SPL", new PathPlannerAuto("OR-SPL"));
 
+        autoChooser.addOption("OL-NZ-I-SAZ", drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2) 
+                .withVelocityY(0) 
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OL-NZ-MI-SAZ")));
+        autoChooser.addOption("OR-NZ-I-SAZ", drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2) 
+                .withVelocityY(0) 
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OR-NZ-MI-SAZ")));
+
+        autoChooser.addOption("OL-NZ-AZ-S", new PathPlannerAuto("OL-NZ-AZ-S")
+            .andThen(drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2) 
+                .withVelocityY(0) 
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OL-NZ-AZ-I"))
+            .andThen(drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2) 
+                .withVelocityY(0) 
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OL-NZ-AZ-S")))));
+        
+            autoChooser.addOption("OR-NZ-AZ-S", new PathPlannerAuto("OR-NZ-AZ-S")
+            .andThen(drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2) 
+                .withVelocityY(0) 
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OR-NZ-AZ-I")))
+            .andThen(drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2) 
+                .withVelocityY(0) 
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OR-NZ-AZ-S"))));
+        
         SmartDashboard.putData("autoChooser", autoChooser);
     }
     public Command getAutonomousCommand() {

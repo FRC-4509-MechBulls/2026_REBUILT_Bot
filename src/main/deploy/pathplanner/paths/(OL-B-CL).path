@@ -1,0 +1,54 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.5251957295373675,
+        "y": 5.568
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.766460738064692,
+        "y": 5.5024927816167555
+      },
+      "isLocked": false,
+      "linkedName": "AllianceZoneOLBumpEntered"
+    },
+    {
+      "anchor": {
+        "x": 2.1168779342723014,
+        "y": 5.482793427230047
+      },
+      "prevControl": {
+        "x": 1.8039316870146587,
+        "y": 5.482090288062334
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "CL-Targeted"
+    }
+  ],
+  "rotationTargets": [],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 3.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -30.510353217633117
+  },
+  "reversed": false,
+  "folder": "NZ",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 180.0
+  },
+  "useDefaultConstraints": true
+}

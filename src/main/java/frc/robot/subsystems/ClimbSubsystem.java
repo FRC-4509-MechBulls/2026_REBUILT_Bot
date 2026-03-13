@@ -37,7 +37,7 @@ public class ClimbSubsystem extends SubsystemBase{
     double extensionkD = 0;
 
     public ClimbSubsystem() {
-
+/** 
         // Motor Initialization
         rotationMotor = new SparkMax(Constants.ClimbConstants.rotationMotorID, MotorType.kBrushless);
         extensionMotor = new SparkMax(Constants.ClimbConstants.extensionMotorID, MotorType.kBrushless);
@@ -68,17 +68,18 @@ public class ClimbSubsystem extends SubsystemBase{
         SmartDashboard.putNumber("ClimbExtensionkD", extensionkD);
         SmartDashboard.putNumber("desiredClimbAngle", desiredAngle);
         SmartDashboard.putNumber("desiredClimbExtension", desiredPosition);
-
+*/
     }
 
     public void setDesiredAngle(double angle){
-        desiredAngle = angle;
+//        desiredAngle = angle;
     }
     public void setDesiredPosition(double position){
-        desiredPosition = position;
+//        desiredPosition = position;
     }
 
     public void periodic() {
+/** 
         rotationMotor.set(rotationController.calculate(rotationEncoder.get(), desiredAngle));
         extensionMotor.set(extensionController.calculate(extensionEncoder.get(), desiredPosition));
 
@@ -87,6 +88,7 @@ public class ClimbSubsystem extends SubsystemBase{
         extensionController.setPID(SmartDashboard.getNumber("ClimbExtensionkP", 0), SmartDashboard.getNumber("ClimbExtensionkI", 0), SmartDashboard.getNumber("ClimbExtensionkD", 0));
         desiredAngle = SmartDashboard.getNumber("desiredClimbAngle", 0);
         desiredPosition = SmartDashboard.getNumber("desiredClimbExtension", 0);
+*/    
     }
 
 }

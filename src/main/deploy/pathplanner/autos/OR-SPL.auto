@@ -13,25 +13,13 @@
         {
           "type": "named",
           "data": {
-            "name": "doShooting"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 5.0
+            "name": "reverseIndexer"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "stopShooting"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "(CR-RClimb)"
+            "name": "doShooting"
           }
         },
         {
@@ -43,7 +31,25 @@
         {
           "type": "named",
           "data": {
-            "name": "climbCommandGroup"
+            "name": "loadIndexer"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 10.0
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "stopShooting"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "stopIndexer"
           }
         }
       ]

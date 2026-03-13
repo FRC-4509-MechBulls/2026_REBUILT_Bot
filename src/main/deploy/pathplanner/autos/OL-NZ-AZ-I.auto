@@ -7,49 +7,49 @@
         {
           "type": "path",
           "data": {
-            "pathName": "(OL-CL)"
+            "pathName": "(OL-NZB-I)"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "doShooting"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 5.0
+            "name": "extendHopper"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "stopShooting"
+            "name": "startIntake"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "(CL-LClimb)"
+            "pathName": "(I-L-M)"
           }
         },
         {
-          "type": "wait",
+          "type": "path",
           "data": {
-            "waitTime": 3.0
+            "pathName": "(I-M-L)"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "climbCommandGroup"
+            "name": "stopIntake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "(OL-I-NZB)"
           }
         }
       ]
     }
   },
   "resetOdom": true,
-  "folder": null,
+  "folder": "NZ-AZ-S",
   "choreoAuto": false
 }

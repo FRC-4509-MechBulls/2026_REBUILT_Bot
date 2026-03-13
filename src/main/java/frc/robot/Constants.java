@@ -18,39 +18,59 @@ import edu.wpi.first.math.util.Units;
 import frc.robot.Util.AllianceFlipUtil;
 
 public class Constants {
-    
+    //hi
     public class IntakeConstants {
-        public static final int leftMotorID = 0;
-        public static final int rightMotorID = 1;
-        public static final int wheelMotorID = 7;
-        public static final int encoderChannel = 0;
-        public static final double kP = 0;
+        public static final int leftMotorID = 17;
+        public static final int rightMotorID = 19;
+        public static final int wheelMotorID = 21;
+        public static final int encoderChannel = 7;
+        public static final double kP = 5;
         public static final double kI = 0;
-        public static final double kD = 0;
-        public static final double extendedPosition = 0;
-        public static final double retractedPosition = 0;
-        public static final double intakeWheelSpeed = 0;
+        public static final double kD = 0.5;
+        public static final double extendedPosition = 2.8;
+        public static final double retractedPosition = 1.1;
+        public static final double intakeWheelSpeed = 1;
     }
 
     public class ShooterConstants {
-        public static final int hoodMotorID = 2;
-        public static final int flywheelMotorID = 3;
-        public static final int indexerMotorID = 6;
-        public static final int hoodEncoderChannel = 8;
-        public static final double speedkP = 0;
+        public static final int hoodMotorID = 30;
+        public static final int flywheelMotorID = 20;
+        public static final int indexerMotorID = 25;
+        public static final int hoodEncoderChannel = 6;
+        public static final double speedkP = 5;
         public static final double speedkI = 0;
-        public static final double speedkD = 0;
-        public static final double hoodkP = 0;
+        public static final double speedkD = 0.5;
+        public static final double speedkS = 0.0;
+        public static final double speedkV = 0.04; // make sure this is tuned to RPM
+        public static final double speedkA = 22.83; // 22.83
+        public static final double hoodkP = 5;
         public static final double hoodkI = 0;
         public static final double hoodkD = 0;
-        public static final double hoodAngle1 = 45;
-        public static final double hoodAngle2 = 60;
-        public static final long windUpTime = 1000; //ms
-        public static final double indexerLoadSpeed = 1;
 
-        public static final double maxFlyWheelSpeed = 10;
-        public static final double simpleShootingSpeed = 1;
-        public static final double simpleShootingSpeedHopperExtended = 1;
+        public static final long windUpTime = 2500; //ms
+        public static final long recoveryTime = 500;
+        public static final double indexerLoadSpeed = -.7;
+
+        public static final double verticalDisplacement = 1.3; 
+        public static final double simpleShootingSpeed = 0.5;
+        public static final double simpleShootingSpeedHopperExtended = 0.5;
+        public static final double simpleShootingAngle = 70;
+
+        public static final double maxDistance = 7;
+        public static final double minDistance = 1;
+        public static final double maxHoodAngle = 70;
+        public static final double minHoodAngle = 70;
+
+        public static final double scoringHoodAngle = 70;
+        public static final double passingHoodAngle = 50;
+
+        public static final double maxProjectileHeight = 5;
+
+        public static final double maxFlywheelRPM = 5906;
+        public static final double shotRPMDampener = 1.4;
+
+        public static final double[] correspondingExitVelocity = {1.16, 2.33, 3.49, 4.65, 5.82, 6.98, 8.15, 9.31, 10.47, 11.67};
+        public static final double[] correspondingMotorOutput = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
         
     }
 
@@ -72,18 +92,12 @@ public class Constants {
     }
 
     public class VisionConstants {
-        public static Matrix<N3, N1> visionStd = VecBuilder.fill(.05,.05,Units.degreesToRadians(5));
-        public static final Transform3d robotToFrontLeftCamera = new Transform3d(
-                                                        Units.inchesToMeters(11.6035),  
-                                                        Units.inchesToMeters(11.6835), 
-                                                        Units.inchesToMeters(8.124175), 
-                                                        new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(30))
-                                                        );
+        public static Matrix<N3, N1> visionStd = VecBuilder.fill(.5,.5,Units.degreesToRadians(5));
         public static final Transform3d robotToFrontRightCamera = new Transform3d(
                                                         Units.inchesToMeters(11.6035),
                                                         Units.inchesToMeters(-11.6835),
                                                         Units.inchesToMeters(8.124175),
-                                                        new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(-30))
+                                                        new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(-45))
                                                         );
         public static final Transform3d robotToBackLeftCamera = new Transform3d(
                                                         Units.inchesToMeters(-11.6035),
@@ -105,10 +119,21 @@ public class Constants {
         public static final double aimkI = 0;
         public static final double aimkD = 0;
 
-        public static final double bumpTravelDifference = 1.738;
+        public static final double bumpTravelDifference = 1.738; // inches
+        public static final double distanceTraveledOverBump = 1.287; // meters
+        public static final double bumpTravelTime = 1.3;
 
         public static final Rotation2d blueForwardX = new Rotation2d(0);
         public static final Rotation2d redForwardX = new Rotation2d(Units.degreesToRadians(180));
+    
+        public static final Pose2d OL_BUMP_NZ_BLUE = new Pose2d(5.591, 5.525, new Rotation2d(Math.PI));
+        public static final Pose2d OR_BUMP_NZ_BLUE = new Pose2d(5.591, 2.47, new Rotation2d(Math.PI));
+        public static final Pose2d OL_BUMP_AZ_BLUE = new Pose2d(3.525, 5.568, new Rotation2d(0));
+        public static final Pose2d OR_BUMP_AZ_BLUE = new Pose2d(3.525, 2.47, new Rotation2d(0));
+        public static final Pose2d OL_BUMP_NZ_RED = AllianceFlipUtil.apply(OL_BUMP_NZ_BLUE);
+        public static final Pose2d OR_BUMP_NZ_RED = AllianceFlipUtil.apply(OR_BUMP_NZ_BLUE);
+        public static final Pose2d OL_BUMP_AZ_RED = AllianceFlipUtil.apply(OL_BUMP_AZ_BLUE);
+        public static final Pose2d OR_BUMP_AZ_RED = AllianceFlipUtil.apply(OR_BUMP_AZ_BLUE);
     }
 
     public class PoseConstants {
