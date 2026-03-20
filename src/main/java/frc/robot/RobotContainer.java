@@ -88,13 +88,13 @@ public class RobotContainer {
     public final Command stopIntake = new InstantCommand(()-> intake.intake(false), intake);   
 
     public final Command extendHopper =
-        new RunCommand(() -> intake.setMotors(-4), intake)
-            .withTimeout(1.5)
+        new RunCommand(() -> intake.setMotors(-4.5), intake)
+            .withTimeout(1.75)
             .andThen(new InstantCommand(() -> intake.setMotors(0), intake));
 
     public final Command retractHopper =
-        new RunCommand(() -> intake.setMotors(4), intake)
-            .withTimeout(1.5)
+        new RunCommand(() -> intake.setMotors(4.5), intake)
+            .withTimeout(1.75)
             .andThen(new InstantCommand(() -> intake.setMotors(0), intake));
 
     public final InstantCommand toggleClimbRotate = new InstantCommand(()-> stateController.toggleClimbRotate());

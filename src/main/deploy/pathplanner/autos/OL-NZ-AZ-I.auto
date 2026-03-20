@@ -13,12 +13,6 @@
         {
           "type": "named",
           "data": {
-            "name": "extendHopper"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
             "name": "startIntake"
           }
         },

@@ -13,13 +13,13 @@
         {
           "type": "named",
           "data": {
-            "name": "reverseIndexer"
+            "name": "doShooting"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "doShooting"
+            "name": "reverseIndexer"
           }
         },
         {

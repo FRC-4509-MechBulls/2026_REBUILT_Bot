@@ -51,7 +51,7 @@ public class Constants {
         public static final long recoveryTime = 500;
         public static final double indexerLoadSpeed = -.7;
 
-        public static final double verticalDisplacement = 1.3; 
+        public static final double verticalDisplacemen = 1.3; 
         public static final double simpleShootingSpeed = 0.5;
         public static final double simpleShootingSpeedHopperExtended = 0.5;
         public static final double simpleShootingAngle = 70;
