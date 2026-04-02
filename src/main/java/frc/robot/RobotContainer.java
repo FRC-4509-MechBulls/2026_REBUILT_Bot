@@ -29,7 +29,6 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.ClimbSubsystem;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
@@ -71,8 +70,7 @@ public class RobotContainer {
     public final VisionSubsystem vision = new VisionSubsystem();
     public final ShooterSubsystem shooter = new ShooterSubsystem();
     public final IntakeSubsystem intake = new IntakeSubsystem();
-    public final ClimbSubsystem climb = new ClimbSubsystem();
-    public final StateController stateController = new StateController(drivetrain, climb, shooter, vision, intake);
+    public final StateController stateController = new StateController(drivetrain, shooter, vision, intake);
 
     private SendableChooser<Command> autoChooser = new SendableChooser<>();
 
@@ -97,8 +95,6 @@ public class RobotContainer {
             .withTimeout(1.75)
             .andThen(new InstantCommand(() -> intake.setMotors(0), intake));
 
-    public final InstantCommand toggleClimbRotate = new InstantCommand(()-> stateController.toggleClimbRotate());
-    public final InstantCommand toggleClimbExtension = new InstantCommand(()-> stateController.toggleClimbExtension());   
     public final InstantCommand resetPoseToHub = new InstantCommand(()->stateController.resetPoseToHub());
     public final InstantCommand resetPoseToLeftTrench = new InstantCommand(()->stateController.resetPoseToLeftTrench());
     public final InstantCommand resetPoseToRightTrench = new InstantCommand(()->stateController.resetPoseToRightTrench());
@@ -110,18 +106,6 @@ public class RobotContainer {
                 .withRotationalRate(0)
             ).withTimeout(Constants.DriveConstants.bumpTravelTime);
     
-    public final SequentialCommandGroup climbCommandGroup = new SequentialCommandGroup(
-                                new InstantCommand(()-> stateController.toggleClimbExtension())
-                                .andThen(new WaitCommand(1))
-                                .andThen(new InstantCommand(()-> stateController.toggleClimbRotate()))
-                                .andThen(new WaitCommand(2)
-                                .andThen(drivetrain.applyRequest(() ->
-                                            drive.withVelocityX(1) // Drive forward with negative Y (forward)
-                                                .withVelocityY(0) // Drive left with negative X (left)
-                                                .withRotationalRate(0) // Drive counterclockwise with negative X (left)
-                                            )).withTimeout(2)
-                                .andThen(new InstantCommand(()-> stateController.toggleClimbExtension()))));
-
     public RobotContainer() {
         configureBindings();
     }
@@ -129,6 +113,7 @@ public class RobotContainer {
     private void configureBindings() {
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
+ 
          drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
             drivetrain.applyRequest(() ->
@@ -236,7 +221,6 @@ public class RobotContainer {
         NamedCommands.registerCommand("stopIntake", stopIntake);
         NamedCommands.registerCommand("extendHopper", extendHopper);
         NamedCommands.registerCommand("retractHopper", retractHopper);
-        NamedCommands.registerCommand("climbCommandGroup", climbCommandGroup);
         NamedCommands.registerCommand("resetPoseToHub", resetPoseToHub);
         NamedCommands.registerCommand("resetPoseToLeftTrench", resetPoseToLeftTrench);
         NamedCommands.registerCommand("resetPoseToRightTrench", resetPoseToRightTrench);
@@ -249,8 +233,9 @@ public class RobotContainer {
 
 //        autoChooser.addOption("C-SPL-RClimb", new PathPlannerAuto("C-SPL"));
         autoChooser.addOption("OL-SPL", new PathPlannerAuto("OL-SPL"));
-        autoChooser.addOption("OL-SPL-SDEP", new PathPlannerAuto("OL-SPL-SDEP"));
         autoChooser.addOption("OR-SPL", new PathPlannerAuto("OR-SPL"));
+        autoChooser.addOption("ORT-SPL-NZI-S", new PathPlannerAuto("ORT-SPL-NZI-S"));
+        autoChooser.addOption("OLT-SPL-NZI-S", new PathPlannerAuto("OLT-SPL-NZI-S"));
 
         autoChooser.addOption("OL-NZ-I-SAZ", drivetrain.applyRequest(() ->
             robotCentricDrive.withVelocityX(-2) 

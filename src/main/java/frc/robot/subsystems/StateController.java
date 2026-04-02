@@ -30,7 +30,6 @@ import frc.robot.Util.TargetOffsetUtil;
 public class StateController extends SubsystemBase{
 
     CommandSwerveDrivetrain drivetrain;
-    ClimbSubsystem climbSubsystem;
     ShooterSubsystem shooterSubsystem;
     VisionSubsystem visionSubsystem;
     IntakeSubsystem intakeSubsystem;
@@ -73,10 +72,9 @@ public class StateController extends SubsystemBase{
     StructPublisher<Pose3d> frCameraPublisher;
     StructPublisher<Pose3d> blCameraPublisher;
 
-    public StateController(CommandSwerveDrivetrain drive, ClimbSubsystem climb, ShooterSubsystem shooter,
+    public StateController(CommandSwerveDrivetrain drive, ShooterSubsystem shooter,
                            VisionSubsystem vision, IntakeSubsystem intake) {
             drivetrain = drive;
-            climbSubsystem = climb;
             shooterSubsystem = shooter;
             visionSubsystem = vision;
             intakeSubsystem = intake;
@@ -112,9 +110,6 @@ public class StateController extends SubsystemBase{
    }
 
     // Shooter Methods
-    public void setHoodAngle(double angle) {
-        shooterSubsystem.setHoodAngle(angle);
-    }
     public void setShooterSpeed(double speed) {
         shooterSubsystem.setDesiredSpeed(speed);
     }
@@ -130,23 +125,12 @@ public class StateController extends SubsystemBase{
         intakeSubsystem.intake(intake);
     }
 
-    // Climb Methods
-    public void setClimbAngle(double angle) {
-        climbSubsystem.setDesiredAngle(angle);
-    }
-    public void setClimbExtension(double extension) {
-        climbSubsystem.setDesiredPosition(extension);
-    }
-
     // General Methods
     public void resetState() {
-        setHoodAngle(0);
         setShooterSpeed(0);
         setIndexer(false);
         setIntakePosition(0);
         setIntakeWheels(false);
-        setClimbAngle(0);
-        setClimbExtension(0);
     }
     public void updateAlliance(Alliance alliance) {
         currentAlliance = alliance;
@@ -425,34 +409,11 @@ public class StateController extends SubsystemBase{
     public void simpleShoot(boolean shoot) {
         if(hopperExtended) {
             setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeedHopperExtended);
-            setHoodAngle(Constants.ShooterConstants.simpleShootingAngle);
         } else {
             setShooterSpeed(Constants.ShooterConstants.simpleShootingSpeed);
         }
     }
-    public void toggleClimbRotate() {
-        if(!climbRotated) {
-            setClimbAngle(Constants.ClimbConstants.climbReadyAngle);
-            if(intaking) {
-                toggleIntake();
-            }
-            if(hopperExtended){
-                toggleHopper();
-            }
-            climbRotated = true;
-        } else {
-            setClimbAngle(Constants.ClimbConstants.climbRestingAngle);
-            climbRotated = false;
-        }
-    }
-    public void toggleClimbExtension() {
-        if(!climbExtended) {
-            setClimbExtension(Constants.ClimbConstants.climbExtendedDistance);
-            climbExtended = true;
-        } else {
-            setClimbExtension(Constants.ClimbConstants.climbRetractedDistance);
-        }
-    }
+
 
     // Odometry Correction
     public void resetPoseToLeftTrench() {

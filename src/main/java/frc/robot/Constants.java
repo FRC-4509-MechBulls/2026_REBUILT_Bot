@@ -20,8 +20,8 @@ import frc.robot.Util.AllianceFlipUtil;
 public class Constants {
     //hi
     public class IntakeConstants {
-        public static final int leftMotorID = 17;
-        public static final int rightMotorID = 19;
+        public static final int leftMotorID = 19;
+        public static final int rightMotorID = 30;
         public static final int wheelMotorID = 21;
         public static final int encoderChannel = 7;
         public static final double kP = 5;
@@ -49,11 +49,11 @@ public class Constants {
 
         public static final long windUpTime = 2500; //ms
         public static final long recoveryTime = 500;
-        public static final double indexerLoadSpeed = -.7;
+        public static final double indexerLoadSpeed = -.8;
 
         public static final double verticalDisplacemen = 1.3; 
-        public static final double simpleShootingSpeed = 0.5;
-        public static final double simpleShootingSpeedHopperExtended = 0.5;
+        public static final double simpleShootingSpeed = .75;
+        public static final double simpleShootingSpeedHopperExtended = .75;
         public static final double simpleShootingAngle = 70;
 
         public static final double maxDistance = 7;
@@ -62,12 +62,11 @@ public class Constants {
         public static final double minHoodAngle = 70;
 
         public static final double scoringHoodAngle = 70;
-        public static final double passingHoodAngle = 50;
 
         public static final double maxProjectileHeight = 5;
 
         public static final double maxFlywheelRPM = 5906;
-        public static final double shotRPMDampener = 1.4;
+        public static final double shotRPMDampener = 1.75;
 
         public static final double[] correspondingExitVelocity = {1.16, 2.33, 3.49, 4.65, 5.82, 6.98, 8.15, 9.31, 10.47, 11.67};
         public static final double[] correspondingMotorOutput = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};

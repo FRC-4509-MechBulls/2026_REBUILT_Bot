@@ -3,16 +3,16 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 7.732040332147095,
-        "y": 4.589098457888493
+        "x": 2.535349940686744,
+        "y": 7.311174377228838
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.973415439040066,
-        "y": 4.52399809097396
+        "x": 2.815088967968981,
+        "y": 7.397247924089942
       },
       "isLocked": false,
-      "linkedName": "(NZ-OL-MI)"
+      "linkedName": "LT-Aimed"
     },
     {
       "anchor": {
@@ -20,15 +20,24 @@
         "y": 7.0852313167205985
       },
       "prevControl": {
-        "x": 7.455282627955005,
-        "y": 6.911659984596377
+        "x": 6.419418742584728,
+        "y": 7.676986951368814
       },
       "nextControl": null,
       "isLocked": false,
       "linkedName": "NeutralZoneOLIntakeReady"
     }
   ],
-  "rotationTargets": [],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.2966252220248666,
+      "rotationDegrees": 0.0
+    },
+    {
+      "waypointRelativePos": 0.6465364120781508,
+      "rotationDegrees": 0.0
+    }
+  ],
   "constraintZones": [],
   "pointTowardsZones": [],
   "eventMarkers": [],
@@ -45,10 +54,10 @@
     "rotation": -90.0
   },
   "reversed": false,
-  "folder": "NZ",
+  "folder": "Trench",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -90.0
+    "rotation": -57.57713817386998
   },
   "useDefaultConstraints": true
 }

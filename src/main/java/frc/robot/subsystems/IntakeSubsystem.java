@@ -97,8 +97,8 @@ public class IntakeSubsystem extends SubsystemBase{
     }
 
     public void setMotors(double speed){
-        leftMotor.setVoltage(speed);
-        rightMotor.setVoltage(-speed);
+        leftMotor.setVoltage(-speed);
+        rightMotor.setVoltage(speed);
     }
 
     public void intake(boolean intake){

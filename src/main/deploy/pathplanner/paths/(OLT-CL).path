@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 7.732040332147095,
-        "y": 4.589098457888493
+        "x": 3.6327876631079485,
+        "y": 7.408007117437722
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.973415439040066,
-        "y": 4.52399809097396
+        "x": 3.0144889273103277,
+        "y": 7.437463764515649
       },
       "isLocked": false,
-      "linkedName": "(NZ-OL-MI)"
+      "linkedName": "OLTRENCH"
     },
     {
       "anchor": {
-        "x": 7.635207591938949,
-        "y": 7.0852313167205985
+        "x": 2.535349940686744,
+        "y": 7.311174377228838
       },
       "prevControl": {
-        "x": 7.455282627955005,
-        "y": 6.911659984596377
+        "x": 2.901738335614446,
+        "y": 7.378247765832419
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "NeutralZoneOLIntakeReady"
+      "linkedName": "LT-Aimed"
     }
   ],
   "rotationTargets": [],
@@ -42,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -90.0
+    "rotation": -57.57713817386998
   },
   "reversed": false,
-  "folder": "NZ",
+  "folder": "OL",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -90.0
+    "rotation": 180.0
   },
   "useDefaultConstraints": true
 }
