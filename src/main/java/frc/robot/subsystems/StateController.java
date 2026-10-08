@@ -86,7 +86,7 @@ public class StateController extends SubsystemBase{
             currentTarget = Targets.HUB;
             currentZoneTarget = ZoneTargets.BLUE_ALLIANCE_1;
             currentTargetPose = new Pose2d();
-            shotDampener = Constants.ShooterConstants.shotRPMDampener;
+            shotDampener = Constants.ShooterConstants.shotDampener;
 
             targetPoseField = new Field2d();
             targetPoseField.setRobotPose(targetPose);

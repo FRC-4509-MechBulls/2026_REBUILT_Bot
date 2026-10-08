@@ -36,24 +36,23 @@ public class Constants {
         public static final int hoodMotorID = 30;
         public static final int flywheelMotorID = 20;
         public static final int indexerMotorID = 25;
-        public static final int hoodEncoderChannel = 6;
-        public static final double speedkP = 5;
-        public static final double speedkI = 0;
-        public static final double speedkD = 0.5;
-        public static final double speedkS = 0.0;
-        public static final double speedkV = 0.04; // make sure this is tuned to RPM
-        public static final double speedkA = 22.83; // 22.83
-        public static final double hoodkP = 5;
-        public static final double hoodkI = 0;
-        public static final double hoodkD = 0;
+
+        // ---------------- Flywheel (NEO on SparkMax) ----------------
+        // Runs open loop (no encoder), so all speeds are motor output from 0 to 1.
+        public static final boolean flywheelInverted = false;   // flip if positive output spins the wheel backwards
+        public static final boolean flywheelBrakeMode = false;  // coast is easier on the motor; brake stops the wheel hard
+        public static final int flywheelCurrentLimit = 50;      // amps (smart current limit)
+        public static final int flywheelSecondaryCurrentLimit = 60; // amps (hard limit)
+        public static final double flywheelReverseSpeed = 0.5;  // output used when spinning the shooter backwards
+        // --------------------------------------------------------------------
 
         public static final long windUpTime = 2500; //ms
         public static final long recoveryTime = 500;
         public static final double indexerLoadSpeed = -.8;
 
         public static final double verticalDisplacemen = 1.3; 
-        public static final double simpleShootingSpeed = .75;
-        public static final double simpleShootingSpeedHopperExtended = .75;
+        public static final double simpleShootingSpeed = .75;               // operator right trigger
+        public static final double simpleShootingSpeedHopperExtended = .75; // operator right trigger with hopper out
         public static final double simpleShootingAngle = 70;
 
         public static final double maxDistance = 7;
@@ -65,8 +64,7 @@ public class Constants {
 
         public static final double maxProjectileHeight = 5;
 
-        public static final double maxFlywheelRPM = 5906;
-        public static final double shotRPMDampener = 1.75;
+        public static final double shotDampener = 1.75;
 
         public static final double[] correspondingExitVelocity = {1.16, 2.33, 3.49, 4.65, 5.82, 6.98, 8.15, 9.31, 10.47, 11.67};
         public static final double[] correspondingMotorOutput = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};

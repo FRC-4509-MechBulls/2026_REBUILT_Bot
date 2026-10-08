@@ -78,6 +78,7 @@ public class RobotContainer {
     public final InstantCommand doShooting = new InstantCommand(()-> stateController.shoot(true));
     public final InstantCommand stopShooting = new InstantCommand(()-> stateController.shoot(false));    
     public final InstantCommand doSimpleShooting = new InstantCommand(()-> stateController.simpleShoot(true));
+    public final InstantCommand reverseShooter = new InstantCommand(()-> shooter.reverse());
     public final InstantCommand loadIndexer = new InstantCommand(()->shooter.setIndexer(true));
     public final InstantCommand stopIndexer = new InstantCommand(()->shooter.setIndexer(false));
     public final InstantCommand reverseIndexer = new InstantCommand(()->shooter.reverseIndexer());
@@ -187,13 +188,16 @@ public class RobotContainer {
         driverController.povRight().onTrue(resetPoseToRightTrench);
         driverController.povDown().onTrue(resetPoseToVisionEstimate);
 
+        // Reset field-centric heading: point the robot away from the driver and press Start
+        driverController.start().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
+
         // Testing
         driverController.leftBumper().onTrue(travelOverBumpTimed);
 
         drivetrain.registerTelemetry(logger::telemeterize);
         
         operatorController.b().onTrue(resetRobot);
-        operatorController.leftTrigger().whileTrue(doShooting);
+        operatorController.leftTrigger().whileTrue(reverseShooter); // spin the shooter backwards (no cameras, so no distance shot)
         operatorController.leftTrigger().whileFalse(stopShooting);
         operatorController.x().whileTrue(new InstantCommand(()->shooter.setIndexer(true)));
         operatorController.y().whileFalse(new InstantCommand(()->shooter.reverseIndexer()));        
