@@ -3,6 +3,7 @@ package frc.robot;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 
 import com.pathplanner.lib.util.DriveFeedforwards;
+import com.pathplanner.lib.util.FlippingUtil;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -15,7 +16,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import frc.robot.Util.AllianceFlipUtil;
 
 public class Constants {
     //hi
@@ -23,27 +23,29 @@ public class Constants {
         public static final int leftMotorID = 19;
         public static final int rightMotorID = 30;
         public static final int wheelMotorID = 21;
-        public static final int encoderChannel = 7;
-        public static final double kP = 5;
-        public static final double kI = 0;
-        public static final double kD = 0.5;
-        public static final double extendedPosition = 2.8;
-        public static final double retractedPosition = 1.1;
         public static final double intakeWheelSpeed = 1;
+
+        public static final boolean hopperLimitsEnabled = false;
+        public static final double hopperExtendedRotations = 0;
+        public static final double hopperRetractedRotations = 0;
+        public static final double hopperPositionTolerance = 0.5;
     }
 
     public class ShooterConstants {
-        public static final int hoodMotorID = 30;
         public static final int flywheelMotorID = 20;
         public static final int indexerMotorID = 25;
 
         // ---------------- Flywheel (NEO on SparkMax) ----------------
-        // Runs open loop (no encoder), so all speeds are motor output from 0 to 1.
+        // Runs open loop, so all speeds are motor output from 0 to 1.
         public static final boolean flywheelInverted = false;   // flip if positive output spins the wheel backwards
         public static final boolean flywheelBrakeMode = false;  // coast is easier on the motor; brake stops the wheel hard
         public static final int flywheelCurrentLimit = 50;      // amps (smart current limit)
         public static final int flywheelSecondaryCurrentLimit = 60; // amps (hard limit)
         public static final double flywheelReverseSpeed = 0.5;  // output used when spinning the shooter backwards
+        public static final double flywheelMaxRPM = 3000;
+        public static final double flywheelReadyFraction = 0.85;
+        public static final double flywheelReadyDebounce = 0.1;
+        public static final double spinUpTimeout = 1.0;
         // --------------------------------------------------------------------
 
         public static final long windUpTime = 2500; //ms
@@ -53,14 +55,14 @@ public class Constants {
         public static final double verticalDisplacemen = 1.3; 
         public static final double simpleShootingSpeed = .75;               // operator right trigger
         public static final double simpleShootingSpeedHopperExtended = .75; // operator right trigger with hopper out
-        public static final double simpleShootingAngle = 70;
+        public static final double simpleShootingAngle = 30;
 
         public static final double maxDistance = 7;
         public static final double minDistance = 1;
-        public static final double maxHoodAngle = 70;
-        public static final double minHoodAngle = 70;
+        public static final double maxHoodAngle = 30;
+        public static final double minHoodAngle = 30;
 
-        public static final double scoringHoodAngle = 70;
+        public static final double scoringHoodAngle = 30;
 
         public static final double maxProjectileHeight = 5;
 
@@ -127,15 +129,15 @@ public class Constants {
         public static final Pose2d OR_BUMP_NZ_BLUE = new Pose2d(5.591, 2.47, new Rotation2d(Math.PI));
         public static final Pose2d OL_BUMP_AZ_BLUE = new Pose2d(3.525, 5.568, new Rotation2d(0));
         public static final Pose2d OR_BUMP_AZ_BLUE = new Pose2d(3.525, 2.47, new Rotation2d(0));
-        public static final Pose2d OL_BUMP_NZ_RED = AllianceFlipUtil.apply(OL_BUMP_NZ_BLUE);
-        public static final Pose2d OR_BUMP_NZ_RED = AllianceFlipUtil.apply(OR_BUMP_NZ_BLUE);
-        public static final Pose2d OL_BUMP_AZ_RED = AllianceFlipUtil.apply(OL_BUMP_AZ_BLUE);
-        public static final Pose2d OR_BUMP_AZ_RED = AllianceFlipUtil.apply(OR_BUMP_AZ_BLUE);
+        public static final Pose2d OL_BUMP_NZ_RED = FlippingUtil.flipFieldPose(OL_BUMP_NZ_BLUE);
+        public static final Pose2d OR_BUMP_NZ_RED = FlippingUtil.flipFieldPose(OR_BUMP_NZ_BLUE);
+        public static final Pose2d OL_BUMP_AZ_RED = FlippingUtil.flipFieldPose(OL_BUMP_AZ_BLUE);
+        public static final Pose2d OR_BUMP_AZ_RED = FlippingUtil.flipFieldPose(OR_BUMP_AZ_BLUE);
     }
 
     public class PoseConstants {
         public static final Pose2d blueHub = new Pose2d(new Translation2d(4.626,4.034), new Rotation2d());
-        public static final Pose2d redHub =  new Pose2d(new Translation2d(11.94, 4.034), new Rotation2d());
+        public static final Pose2d redHub =  new Pose2d(new Translation2d(FieldConstants.fieldLength - 4.626, 4.034), new Rotation2d());
 
         public static final Pose2d blueAlliance1 =  new Pose2d(new Translation2d(2.31, 2.017), new Rotation2d());
         public static final Pose2d blueAlliance2 =  new Pose2d(new Translation2d(2.31, 6.05), new Rotation2d());

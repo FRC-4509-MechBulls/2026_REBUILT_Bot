@@ -1,5 +1,7 @@
 package frc.robot.Util;
 
+import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
+
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.Constants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -43,19 +45,14 @@ public class HubOffsetUtil {
             defaultLocation = defaultRedHubPose;
         }
 
-        ChassisSpeeds driveSpeed = drivetrain.getState().Speeds;
+        SwerveDriveState state = drivetrain.getState();
+        ChassisSpeeds driveSpeed = ChassisSpeeds.fromRobotRelativeSpeeds(state.Speeds, state.Pose.getRotation());
         double airtime = calculateAirtime(exitVelocity, alliance, defaultLocation, hoodAngle);
 
         Translation2d distanceMoved = new Translation2d(
             (-driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),
             (-driveSpeed.vyMetersPerSecond * airtime * dampeningFactorY)
         );
-        if(alliance == Alliance.Red){
-            distanceMoved = new Translation2d(
-                (driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),
-                (driveSpeed.vyMetersPerSecond * airtime * dampeningFactorY)
-            );
-        }
 
         Translation2d futureLocation = (defaultLocation.plus(distanceMoved));
 

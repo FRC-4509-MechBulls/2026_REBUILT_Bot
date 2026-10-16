@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -118,9 +119,6 @@ public class StateController extends SubsystemBase{
     }
 
     // Intake Methods
-    public void setIntakePosition(double position) {
-        intakeSubsystem.setPosition(position);
-    }
     public void setIntakeWheels(boolean intake) {
         intakeSubsystem.intake(intake);
     }
@@ -129,7 +127,7 @@ public class StateController extends SubsystemBase{
     public void resetState() {
         setShooterSpeed(0);
         setIndexer(false);
-        setIntakePosition(0);
+        intakeSubsystem.setMotors(0);
         setIntakeWheels(false);
     }
     public void updateAlliance(Alliance alliance) {
@@ -238,9 +236,6 @@ public class StateController extends SubsystemBase{
         }
         
         currentTargetPose = targetPose;
-        if(currentAlliance == Alliance.Red) {
-           angle.plus(Rotation2d.fromDegrees(180));
-        }
         currentAngle = angle.getDegrees();
         return angle;
     }
@@ -266,9 +261,9 @@ public class StateController extends SubsystemBase{
   //                              * (Constants.ShooterConstants.maxHoodAngle - Constants.ShooterConstants.minHoodAngle);
         
   //          return hoodAngle;
-        return Units.degreesToRadians(30);
-        } 
-        return Units.degreesToRadians(30);
+        return Units.degreesToRadians(Constants.ShooterConstants.scoringHoodAngle);
+        }
+        return Units.degreesToRadians(Constants.ShooterConstants.scoringHoodAngle);
     }
     public double calculateFlywheelSpeed() {
 
@@ -284,6 +279,8 @@ public class StateController extends SubsystemBase{
 
             double[] velocities = Constants.ShooterConstants.correspondingExitVelocity;
             double[] outputs = Constants.ShooterConstants.correspondingMotorOutput;
+
+            velocity = MathUtil.clamp(velocity, velocities[0], velocities[velocities.length - 1]);
 
             double v1 = 0;
             double v2 = 0;
@@ -365,7 +362,11 @@ public class StateController extends SubsystemBase{
    //     addVisionMeasurement();
    //     updateHoodAngle();
         targetPoseField.setRobotPose(currentTargetPose);
-        
+        updateCurrentTarget();
+        hopperExtended = intakeSubsystem.isHopperExtended();
+        intaking = intakeSubsystem.isIntaking();
+
+        SmartDashboard.putNumber("CalculatedDistanceToTarget", distanceToTarget());
         SmartDashboard.putNumber("CalculatedAngle", currentAngle);
         SmartDashboard.putString("CurrentTarget", currentTarget.toString());
         SmartDashboard.putBoolean("Intaking", intaking);
@@ -387,15 +388,6 @@ public class StateController extends SubsystemBase{
             intaking = false;
         }
     }
-    public void toggleHopper() {
-        if(!hopperExtended){
-            setIntakePosition(Constants.IntakeConstants.extendedPosition);
-            hopperExtended = true;
-        } else {
-            setIntakePosition(Constants.IntakeConstants.retractedPosition);
-            hopperExtended = false;
-        }
-    }
     public void shoot(boolean shoot) {
         if(shoot){
             setShooterSpeed(calculateShooterMotorSpeed(calculateFlywheelSpeed() * shotDampener));
@@ -404,6 +396,7 @@ public class StateController extends SubsystemBase{
             SmartDashboard.putNumber("CalculatedFlywheelVelocityScaled", calculateFlywheelSpeed()*shotDampener);
         } else{
             setShooterSpeed(0);
+            setIndexer(false);
         }
     }
     public void simpleShoot(boolean shoot) {
@@ -417,13 +410,13 @@ public class StateController extends SubsystemBase{
 
     // Odometry Correction
     public void resetPoseToLeftTrench() {
-        drivetrain.resetPose(knownLeftTrenchPose);
+        drivetrain.resetTranslation(knownLeftTrenchPose.getTranslation());
     }
     public void resetPoseToRightTrench() {
-        drivetrain.resetPose(knownRightTrenchPose);
+        drivetrain.resetTranslation(knownRightTrenchPose.getTranslation());
     }
     public void resetPoseToHub() {
-        drivetrain.resetPose(knownHubPose);
+        drivetrain.resetTranslation(knownHubPose.getTranslation());
     }
 
     public void resetPoseToVisionEstimate() {

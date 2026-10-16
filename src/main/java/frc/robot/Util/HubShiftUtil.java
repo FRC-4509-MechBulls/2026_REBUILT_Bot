@@ -12,7 +12,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 
 public class HubShiftUtil {
-  private enum ShiftEnum {
+  public enum ShiftEnum {
     TRANSITION,
     SHIFT1,
     SHIFT2,
@@ -23,7 +23,7 @@ public class HubShiftUtil {
     DISABLED;
   }
 
-  private record ShiftInfo(
+  public record ShiftInfo(
       ShiftEnum currentShift, double elapsedTime, double remainingTime, boolean active) {}
 
   private static Timer shiftTimer = new Timer();
@@ -55,8 +55,19 @@ public class HubShiftUtil {
     shiftTimer.restart();
   }
 
+  private static double getCurrentTime() {
+    double matchTime = DriverStation.getMatchTime();
+    if (matchTime < 0) {
+      return shiftTimer.get();
+    }
+    if (DriverStation.isAutonomous()) {
+      return autoEndTime - matchTime;
+    }
+    return shiftEndTimes[shiftEndTimes.length - 1] - matchTime;
+  }
+
   public static ShiftInfo getShiftInfo() {
-    double currentTime = shiftTimer.get();
+    double currentTime = getCurrentTime();
     boolean[] currentSchedule = inactiveSchedule;
     Alliance startAlliance = getFirstActiveAlliance();
     currentSchedule =

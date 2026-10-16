@@ -8,10 +8,13 @@ import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.PersistMode;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -25,8 +28,11 @@ public class ShooterSubsystem extends SubsystemBase{
     SparkMaxConfig flywheelConfig;
     TalonFXConfiguration indexerConfig;
 
-    // Flywheel runs open loop (no encoder feedback), output is -1 to 1
+    // Flywheel runs open loop, output is -1 to 1
     double desiredSpeed = 0;
+    RelativeEncoder flywheelEncoder;
+    Debouncer atSpeedDebouncer = new Debouncer(Constants.ShooterConstants.flywheelReadyDebounce, DebounceType.kRising);
+    boolean atSpeed = false;
 
     double hoodAngle = Constants.ShooterConstants.scoringHoodAngle;
     double indexerSpeed = 0;
@@ -45,6 +51,7 @@ public class ShooterSubsystem extends SubsystemBase{
             flywheelConfig.secondaryCurrentLimit(Constants.ShooterConstants.flywheelSecondaryCurrentLimit);
             flywheelConfig.voltageCompensation(12); // keeps open loop shots consistent as the battery drains
         flywheelMotor.configure(flywheelConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        flywheelEncoder = flywheelMotor.getEncoder();
         indexerConfig = new TalonFXConfiguration()
                             .withCurrentLimits(new CurrentLimitsConfigs()
                                 .withStatorCurrentLimit(40)
@@ -79,6 +86,12 @@ public class ShooterSubsystem extends SubsystemBase{
     public double getDesiredSpeed() {
         return desiredSpeed;
     }
+    public double getFlywheelRPM() {
+        return flywheelEncoder.getVelocity();
+    }
+    public boolean isAtSpeed() {
+        return atSpeed;
+    }
 
     public void setIndexer(boolean load) {
         if(load){
@@ -93,7 +106,14 @@ public class ShooterSubsystem extends SubsystemBase{
 
     @Override
     public void periodic(){
+        double expectedRPM = desiredSpeed * Constants.ShooterConstants.flywheelMaxRPM;
+        boolean upToSpeed = desiredSpeed > 0
+                && getFlywheelRPM() >= expectedRPM * Constants.ShooterConstants.flywheelReadyFraction;
+        atSpeed = atSpeedDebouncer.calculate(upToSpeed);
+
         SmartDashboard.putNumber("FlywheelOutput", desiredSpeed);
+        SmartDashboard.putNumber("FlywheelRPM", getFlywheelRPM());
+        SmartDashboard.putBoolean("ShooterReady", atSpeed);
     }
 
     public double getCurrentHoodAngle() {

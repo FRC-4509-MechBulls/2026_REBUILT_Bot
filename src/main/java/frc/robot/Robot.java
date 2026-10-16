@@ -6,12 +6,14 @@ package frc.robot;
 
 import java.util.Optional;
 
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.Util.HubShiftUtil;
 
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
@@ -19,17 +21,20 @@ public class Robot extends TimedRobot {
   private final RobotContainer m_robotContainer;
   private Optional<Alliance> lastAlliance = Optional.empty();
 
-  CommandXboxController controller = new CommandXboxController(0);
-
 
   public Robot() {
+    DataLogManager.start();
+    DriverStation.startDataLog(DataLogManager.getLog());
     m_robotContainer = new RobotContainer();
   }
 
   @Override
   public void robotPeriodic() {
-    CommandScheduler.getInstance().run(); 
-
+    CommandScheduler.getInstance().run();
+    SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
+    HubShiftUtil.ShiftInfo shiftInfo = HubShiftUtil.getShiftInfo();
+    SmartDashboard.putBoolean("HubActive", shiftInfo.active());
+    SmartDashboard.putNumber("ShiftTimeLeft", Math.max(shiftInfo.remainingTime(), 0));
     Optional<Alliance> currentAlliance = DriverStation.getAlliance();
 
     if(currentAlliance.isPresent() && !currentAlliance.equals(lastAlliance)) {
@@ -44,7 +49,9 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+    m_robotContainer.stateController.resetState();
+  }
 
   @Override
   public void disabledPeriodic() {}
@@ -54,10 +61,11 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousInit() {
+    HubShiftUtil.initialize();
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
     if (m_autonomousCommand != null) {
-      m_autonomousCommand.schedule();
+      CommandScheduler.getInstance().schedule(m_autonomousCommand);
     }
   }
 
@@ -69,9 +77,11 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
+    HubShiftUtil.initialize();
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+    m_robotContainer.stateController.resetState();
   }
 
   @Override

@@ -19,19 +19,19 @@
         {
           "type": "named",
           "data": {
-            "name": "extendHopper"
+            "name": "doShooting"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "doShooting"
+            "name": "extendHopper"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 2.0
+            "waitTime": 0.25
           }
         },
         {

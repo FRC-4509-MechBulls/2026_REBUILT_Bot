@@ -1,5 +1,7 @@
 package frc.robot.Util;
 
+import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
+
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
@@ -55,19 +57,14 @@ public class TargetOffsetUtil {
             }
         }
 
-        ChassisSpeeds driveSpeed = drivetrain.getState().Speeds;
+        SwerveDriveState state = drivetrain.getState();
+        ChassisSpeeds driveSpeed = ChassisSpeeds.fromRobotRelativeSpeeds(state.Speeds, state.Pose.getRotation());
         double airtime = calculateAirtime(exitVelocity, alliance, defaultLocation, hoodAngle);
 
         Translation2d distanceMoved = new Translation2d(
-            (driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),
-            (driveSpeed.vyMetersPerSecond * airtime * dampeningFactorY)
+            (-driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),
+            (-driveSpeed.vyMetersPerSecond * airtime * dampeningFactorY)
         );
-        if(alliance == Alliance.Red){
-            distanceMoved = new Translation2d(
-                (-driveSpeed.vxMetersPerSecond * airtime * dampeningFactorX),
-                (-driveSpeed.vyMetersPerSecond * airtime * dampeningFactorY)
-            );
-        }
 
         Translation2d futureLocation = (defaultLocation.plus(distanceMoved));
 
