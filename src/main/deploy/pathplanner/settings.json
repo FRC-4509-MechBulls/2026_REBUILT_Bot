@@ -7,12 +7,11 @@
     "NZ",
     "Trench",
     "OL",
-    "OR"
+    "OR",
+    "Defense"
   ],
   "autoFolders": [
-    "C",
-    "NZ-SAZ",
-    "NZ-AZ-S"
+    "Defense"
   ],
   "defaultMaxVel": 3.0,
   "defaultMaxAccel": 3.0,

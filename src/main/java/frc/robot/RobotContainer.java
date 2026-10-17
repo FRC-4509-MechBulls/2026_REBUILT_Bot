@@ -6,56 +6,69 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.swerve.SwerveModule;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
-import com.ctre.phoenix6.swerve.SwerveRequest.ForwardPerspectiveValue;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Util.AllianceFlipUtil;
+import frc.robot.Util.HubShiftUtil;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.StateController;
-import frc.robot.subsystems.VisionSubsystem;
 
+@Logged(strategy = Logged.Strategy.OPT_IN)
 public class RobotContainer {
     private double MaxTheoreticalSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
-    private double MaxSpeed = MaxTheoreticalSpeed * 0.8;
-    private double MaxTheoreticalAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
-    private double MaxAngularRate = MaxTheoreticalAngularRate * 0.8;
+    private double MaxSpeed = MaxTheoreticalSpeed;
+    private double MaxTheoreticalAngularRate = RotationsPerSecond.of(1.5).in(RadiansPerSecond); // 1.5 rotations per second max angular velocity
+    private double MaxAngularRate = MaxTheoreticalAngularRate;
     private final double stickDeadband = 0.1;
+
+    private final SlewRateLimiter xLimiter = new SlewRateLimiter(Constants.DriveConstants.driveAccelLimit / MaxSpeed);
+    private final SlewRateLimiter yLimiter = new SlewRateLimiter(Constants.DriveConstants.driveAccelLimit / MaxSpeed);
+    private double driveX = 0;
+    private double driveY = 0;
 
     /* Setting up bindings for necessary control of the swerve drive platform */
     private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
-    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
     private SwerveRequest.RobotCentric robotCentricDrive = new SwerveRequest.RobotCentric();
-
-
-
-
-
 
     private final SwerveRequest.FieldCentricFacingAngle facingAngle = new SwerveRequest.FieldCentricFacingAngle()
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage).withHeadingPID(Constants.DriveConstants.aimkP, Constants.DriveConstants.aimkI, Constants.DriveConstants.aimkD);
@@ -66,16 +79,32 @@ public class RobotContainer {
     private final CommandXboxController operatorController = new CommandXboxController(1);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-    public final VisionSubsystem vision = new VisionSubsystem();
-    public final ShooterSubsystem shooter = new ShooterSubsystem();
-    public final IntakeSubsystem intake = new IntakeSubsystem();
-    public final StateController stateController = new StateController(drivetrain, shooter, vision, intake);
+    @Logged public final ShooterSubsystem shooter = new ShooterSubsystem();
+    @Logged public final IntakeSubsystem intake = new IntakeSubsystem();
+    @Logged public final StateController stateController = new StateController(drivetrain, shooter, intake);
 
     private SendableChooser<Command> autoChooser = new SendableChooser<>();
+    private final Map<String, Command> autos = new LinkedHashMap<>();
+    private String selectedAuto = "Nothing - Hub";
+    private final Map<Command, Pose2d> startingPoses = new HashMap<>();
+    private Command lastPreviewedAuto = null;
+    private Optional<Alliance> lastPreviewedAlliance = Optional.empty();
 
-    public final InstantCommand resetRobot = new InstantCommand(()-> stateController.resetState()); 
+    private boolean wasTeleop = false;
+    private boolean lastHubActive = false;
+    private double lastShiftTimeLeft = 0;
+    private double hubRumbleEndTime = 0;
+    private double shiftWarningStartTime = -1;
+
+    private final String[] moduleNames = {"FL", "FR", "BL", "BR"};
+    private final Alert nothingAutoAlert = new Alert("Plain \"nothing\" auto selected: the robot won't know which way it's facing", AlertType.kWarning);
+    private final Alert lowBatteryAlert = new Alert("Battery below 11.5 V", AlertType.kWarning);
+    private final Alert drivetrainDisconnectedAlert = new Alert("Drivetrain device not responding", AlertType.kError);
+    private final Debouncer drivetrainDisconnectedDebouncer = new Debouncer(0.5);
+
+    public final InstantCommand resetRobot = new InstantCommand(()-> stateController.resetState());
     public final InstantCommand doShooting = new InstantCommand(()-> stateController.shoot(true));
-    public final InstantCommand stopShooting = new InstantCommand(()-> stateController.shoot(false));    
+    public final InstantCommand stopShooting = new InstantCommand(()-> stateController.shoot(false));
     public final InstantCommand doSimpleShooting = new InstantCommand(()-> stateController.simpleShoot(true));
     public final InstantCommand reverseShooter = new InstantCommand(()-> shooter.reverse());
     public final Command loadIndexer = Commands.waitUntil(shooter::isAtSpeed)
@@ -84,32 +113,18 @@ public class RobotContainer {
     public final InstantCommand stopIndexer = new InstantCommand(()->shooter.setIndexer(false));
     public final InstantCommand reverseIndexer = new InstantCommand(()->shooter.reverseIndexer());
 
-    public final Command startIntake = new InstantCommand(()-> intake.intake(true), intake);   
-    public final Command stopIntake = new InstantCommand(()-> intake.intake(false), intake);   
+    public final Command startIntake = new InstantCommand(()-> intake.intake(true), intake);
+    public final Command stopIntake = new InstantCommand(()-> intake.intake(false), intake);
 
-    public final Command extendHopper =
-        new RunCommand(() -> intake.setMotors(-4.5), intake)
-            .until(intake::isHopperExtended)
-            .withTimeout(1.75)
-            .andThen(new InstantCommand(() -> intake.setMotors(0), intake));
-
-    public final Command retractHopper =
-        new RunCommand(() -> intake.setMotors(4.5), intake)
-            .until(intake::isHopperRetracted)
-            .withTimeout(1.75)
-            .andThen(new InstantCommand(() -> intake.setMotors(0), intake));
+    public final Command extendHopper = extendHopperCommand();
+    public final Command retractHopper = retractHopperCommand();
 
     public final InstantCommand resetPoseToHub = new InstantCommand(()->stateController.resetPoseToHub());
     public final InstantCommand resetPoseToLeftTrench = new InstantCommand(()->stateController.resetPoseToLeftTrench());
     public final InstantCommand resetPoseToRightTrench = new InstantCommand(()->stateController.resetPoseToRightTrench());
-    public final InstantCommand resetPoseToVisionEstimate = new InstantCommand(()->stateController.resetPoseToVisionEstimate());
-    
-    public final Command travelOverBumpTimed = drivetrain.applyRequest(() ->
-            robotCentricDrive.withVelocityX(-2) 
-                .withVelocityY(0) 
-                .withRotationalRate(0)
-            ).withTimeout(Constants.DriveConstants.bumpTravelTime);
-    
+
+    public final Command travelOverBumpTimed = crossBumpCommand();
+
     public RobotContainer() {
         configureBindings();
     }
@@ -118,52 +133,104 @@ public class RobotContainer {
         return MathUtil.applyDeadband(stick, stickDeadband);
     }
 
+    private double rotationInput() {
+        double rotation = deadband(driverController.getRightX());
+        return -Math.copySign(rotation * rotation, rotation);
+    }
+
+    private Command extendHopperCommand() {
+        return new RunCommand(() -> intake.setMotors(-4.5), intake)
+            .until(intake::isHopperAtExtendedLimit)
+            .withTimeout(1.75)
+            .andThen(new InstantCommand(() -> {
+                intake.setMotors(0);
+                intake.markHopperExtended();
+            }, intake));
+    }
+
+    private Command retractHopperCommand() {
+        return new RunCommand(() -> intake.setMotors(4.5), intake)
+            .until(intake::isHopperAtRetractedLimit)
+            .withTimeout(1.75)
+            .andThen(new InstantCommand(() -> {
+                intake.setMotors(0);
+                intake.markHopperRetracted();
+            }, intake));
+    }
+
+    private Command crossBumpCommand() {
+        return drivetrain.applyRequest(() ->
+            robotCentricDrive.withVelocityX(-2)
+                .withVelocityY(0)
+                .withRotationalRate(0)
+            ).withTimeout(Constants.DriveConstants.bumpTravelTime);
+    }
+
+    private Command xLockCommand() {
+        return drivetrain.applyRequest(() -> brake);
+    }
+
+    private Command oneButtonShotCommand() {
+        return Commands.sequence(
+                Commands.runOnce(() -> stateController.simpleShoot(true), shooter),
+                Commands.waitUntil(shooter::isAtSpeed).withTimeout(Constants.ShooterConstants.spinUpTimeout),
+                Commands.runOnce(() -> shooter.setIndexer(true)),
+                retractHopperCommand(),
+                Commands.idle())
+            .finallyDo(() -> stateController.shoot(false));
+    }
+
+    public void updateDriveInputs() {
+        driveX = xLimiter.calculate(-deadband(driverController.getLeftY()));
+        driveY = yLimiter.calculate(-deadband(driverController.getLeftX()));
+    }
+
     private void configureBindings() {
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
- 
+
          drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(-deadband(driverController.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-deadband(driverController.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-deadband(driverController.getRightX()) * MaxAngularRate) // Drive counterclockwise with negative X (left)
+                drive.withVelocityX(driveX * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(driveY * MaxSpeed) // Drive left with negative X (left)
+                    .withRotationalRate(rotationInput() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
 
         driverController.rightTrigger().whileTrue(
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(-deadband(driverController.getLeftY()) * MaxSpeed/2) // Drive forward with negative Y (forward)
-                    .withVelocityY(-deadband(driverController.getLeftX()) * MaxSpeed/2) // Drive left with negative X (left)
-                    .withRotationalRate(-deadband(driverController.getRightX()) * MaxAngularRate/2) // Drive counterclockwise with negative X (left)
+                drive.withVelocityX(driveX * MaxSpeed/2) // Drive forward with negative Y (forward)
+                    .withVelocityY(driveY * MaxSpeed/2) // Drive left with negative X (left)
+                    .withRotationalRate(rotationInput() * MaxAngularRate/2) // Drive counterclockwise with negative X (left)
             )
         );
 
         driverController.y().whileTrue(
             drivetrain.applyRequest(() ->
-                facingAngle.withVelocityX(-deadband(driverController.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-deadband(driverController.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
+                facingAngle.withVelocityX(driveX * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(driveY * MaxSpeed) // Drive left with negative X (left)
                     .withTargetDirection(new Rotation2d(0)) // Drive counterclockwise with negative X (left)
             )
         );
         driverController.x().whileTrue(
             drivetrain.applyRequest(() ->
-                facingAngle.withVelocityX(-deadband(driverController.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-deadband(driverController.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
+                facingAngle.withVelocityX(driveX * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(driveY * MaxSpeed) // Drive left with negative X (left)
                     .withTargetDirection(new Rotation2d(Math.PI/2)) // Drive counterclockwise with negative X (left)
             )
         );
         driverController.b().whileTrue(
             drivetrain.applyRequest(() ->
-                facingAngle.withVelocityX(-deadband(driverController.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-deadband(driverController.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
+                facingAngle.withVelocityX(driveX * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(driveY * MaxSpeed) // Drive left with negative X (left)
                     .withTargetDirection(new Rotation2d(-Math.PI/2)) // Drive counterclockwise with negative X (left)
             )
         );
         driverController.a().whileTrue(
             drivetrain.applyRequest(() ->
-                facingAngle.withVelocityX(-deadband(driverController.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-deadband(driverController.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
+                facingAngle.withVelocityX(driveX * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(driveY * MaxSpeed) // Drive left with negative X (left)
                     .withTargetDirection(new Rotation2d(Math.PI)) // Drive counterclockwise with negative X (left)
             )
         );
@@ -185,24 +252,24 @@ public class RobotContainer {
 //        driverController.start().and(driverController.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         driverController.leftTrigger().whileTrue(drivetrain.applyRequest(()-> // While left trigger is held, drive while maintain a heading facing the target
-            facingAngle.withVelocityX(-deadband(driverController.getLeftY()) * MaxSpeed)
-                       .withVelocityY(-deadband(driverController.getLeftX()) * MaxSpeed)
+            facingAngle.withVelocityX(driveX * MaxSpeed)
+                       .withVelocityY(driveY * MaxSpeed)
                        .withTargetDirection(stateController.calculateAngleToAim())
         ));
 
         driverController.povUp().onTrue(resetPoseToHub);
         driverController.povLeft().onTrue(resetPoseToLeftTrench);
         driverController.povRight().onTrue(resetPoseToRightTrench);
-        driverController.povDown().onTrue(resetPoseToVisionEstimate);
 
         // Reset field-centric heading: point the robot away from the driver and press Start
         driverController.start().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
         // Testing
         driverController.leftBumper().whileTrue(travelOverBumpTimed);
+        driverController.rightBumper().whileTrue(xLockCommand());
 
         drivetrain.registerTelemetry(logger::telemeterize);
-        
+
         operatorController.b().onTrue(resetRobot);
         operatorController.leftTrigger().whileTrue(reverseShooter); // spin the shooter backwards (no cameras, so no distance shot)
         operatorController.leftTrigger().whileFalse(stopShooting);
@@ -215,6 +282,9 @@ public class RobotContainer {
         operatorController.leftBumper().onTrue(extendHopper);
         operatorController.rightBumper().onTrue(retractHopper);
         operatorController.start().onTrue(Commands.runOnce(()->intake.zeroHopper()).ignoringDisable(true));
+        operatorController.povUp().whileTrue(oneButtonShotCommand());
+        operatorController.povRight().and(RobotModeTriggers.disabled()).onTrue(Commands.runOnce(() -> cycleAuto(1)).ignoringDisable(true));
+        operatorController.povLeft().and(RobotModeTriggers.disabled()).onTrue(Commands.runOnce(() -> cycleAuto(-1)).ignoringDisable(true));
 
         intake.setDefaultCommand(intake.run(()-> intake.controlIntake(
             deadband(operatorController.getLeftY()),
@@ -238,62 +308,145 @@ public class RobotContainer {
         NamedCommands.registerCommand("loadIndexer", loadIndexer);
         NamedCommands.registerCommand("stopIndexer", stopIndexer);
         NamedCommands.registerCommand("reverseIndexer", reverseIndexer);
+        NamedCommands.registerCommand("xLock", xLockCommand());
     }
     public void createAutos() {
-        autoChooser.setDefaultOption("nothing", null);
+        autos.put("Nothing - Hub", setStartingPose(Constants.PoseConstants.knownBlueHubRobotPose));
+        autos.put("Defend - Left Trench", trenchDefenseAuto("Defend-LT"));
+        autos.put("Defend - Right Trench", trenchDefenseAuto("Defend-RT"));
+        autos.put("Defend - Left Bump", bumpDefenseAuto("Defend-LB", Constants.PoseConstants.leftBumpStartBlue));
+        autos.put("Defend - Right Bump", bumpDefenseAuto("Defend-RB", Constants.PoseConstants.rightBumpStartBlue));
+        autos.put("Nothing - Left Trench", setStartingPose(Constants.PoseConstants.knownBlueLeftTrenchRobotPose));
+        autos.put("Nothing - Right Trench", setStartingPose(Constants.PoseConstants.knownBlueRightTrenchRobotPose));
+        autos.put("nothing", null);
 
-//        autoChooser.addOption("C-SPL-RClimb", new PathPlannerAuto("C-SPL"));
-        autoChooser.addOption("OL-SPL", new PathPlannerAuto("OL-SPL"));
-        autoChooser.addOption("OR-SPL", new PathPlannerAuto("OR-SPL"));
-        autoChooser.addOption("ORT-SPL-NZI-S", new PathPlannerAuto("ORT-SPL-NZI-S"));
-        autoChooser.addOption("OLT-SPL-NZI-S", new PathPlannerAuto("OLT-SPL-NZI-S"));
+        for (Map.Entry<String, Command> auto : autos.entrySet()) {
+            if (auto.getKey().equals(selectedAuto)) {
+                autoChooser.setDefaultOption(auto.getKey(), auto.getValue());
+            } else {
+                autoChooser.addOption(auto.getKey(), auto.getValue());
+            }
+        }
+        autoChooser.onChange(this::selectAuto);
 
-        autoChooser.addOption("OL-NZ-I-SAZ", drivetrain.applyRequest(() ->
-            robotCentricDrive.withVelocityX(-2) 
-                .withVelocityY(0) 
-                .withRotationalRate(0)
-            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OL-NZ-MI-SAZ")));
-        autoChooser.addOption("OR-NZ-I-SAZ", drivetrain.applyRequest(() ->
-            robotCentricDrive.withVelocityX(-2) 
-                .withVelocityY(0) 
-                .withRotationalRate(0)
-            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OR-NZ-MI-SAZ")));
-
-        autoChooser.addOption("OL-NZ-AZ-S", new PathPlannerAuto("OL-NZ-AZ-S")
-            .andThen(drivetrain.applyRequest(() ->
-            robotCentricDrive.withVelocityX(-2) 
-                .withVelocityY(0) 
-                .withRotationalRate(0)
-            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OL-NZ-AZ-I"))
-            .andThen(drivetrain.applyRequest(() ->
-            robotCentricDrive.withVelocityX(-2) 
-                .withVelocityY(0) 
-                .withRotationalRate(0)
-            ).withTimeout(Constants.DriveConstants.bumpTravelTime)
-            .andThen(drivetrain.runOnce(() -> drivetrain.resetTranslation(AllianceFlipUtil.apply(Constants.DriveConstants.OL_BUMP_AZ_BLUE.getTranslation()))))
-            .andThen(new PathPlannerAuto("OL-NZ-AZ-S-Return")))));
-        
-            autoChooser.addOption("OR-NZ-AZ-S", new PathPlannerAuto("OR-NZ-AZ-S")
-            .andThen(drivetrain.applyRequest(() ->
-            robotCentricDrive.withVelocityX(-2) 
-                .withVelocityY(0) 
-                .withRotationalRate(0)
-            ).withTimeout(Constants.DriveConstants.bumpTravelTime).andThen(new PathPlannerAuto("OR-NZ-AZ-I")))
-            .andThen(drivetrain.applyRequest(() ->
-            robotCentricDrive.withVelocityX(-2) 
-                .withVelocityY(0) 
-                .withRotationalRate(0)
-            ).withTimeout(Constants.DriveConstants.bumpTravelTime)
-            .andThen(drivetrain.runOnce(() -> drivetrain.resetTranslation(AllianceFlipUtil.apply(Constants.DriveConstants.OR_BUMP_AZ_BLUE.getTranslation()))))
-            .andThen(new PathPlannerAuto("OR-NZ-AZ-S-Return"))));
-        
         SmartDashboard.putData("autoChooser", autoChooser);
     }
+    private void selectAuto(Command command) {
+        for (Map.Entry<String, Command> auto : autos.entrySet()) {
+            if (auto.getValue() == command) {
+                selectedAuto = auto.getKey();
+                return;
+            }
+        }
+    }
+    private void cycleAuto(int direction) {
+        List<String> names = new ArrayList<>(autos.keySet());
+        int index = names.indexOf(selectedAuto);
+        selectedAuto = names.get(Math.floorMod(index + direction, names.size()));
+    }
+    public void publishSelectedAuto() {
+        SmartDashboard.putString("SelectedAuto", selectedAuto);
+    }
+    private Command trenchDefenseAuto(String autoName) {
+        PathPlannerAuto auto = new PathPlannerAuto(autoName);
+        startingPoses.put(auto, auto.getStartingPose());
+        return auto;
+    }
+    private Command bumpDefenseAuto(String autoName, Pose2d blueStart) {
+        Command auto = drivetrain.runOnce(() -> drivetrain.resetPose(AllianceFlipUtil.apply(blueStart)))
+            .andThen(crossBumpCommand())
+            .andThen(new PathPlannerAuto(autoName));
+        startingPoses.put(auto, blueStart);
+        return auto;
+    }
+    private Command setStartingPose(Pose2d bluePose) {
+        Pose2d intakeTowardOpponents = new Pose2d(bluePose.getTranslation(), new Rotation2d());
+        Command command = drivetrain.runOnce(() -> drivetrain.resetPose(AllianceFlipUtil.apply(intakeTowardOpponents)));
+        startingPoses.put(command, intakeTowardOpponents);
+        return command;
+    }
+    public void previewStartingPose() {
+        Command selected = getAutonomousCommand();
+        Optional<Alliance> alliance = DriverStation.getAlliance();
+        if (selected == lastPreviewedAuto && alliance.equals(lastPreviewedAlliance)) {
+            return;
+        }
+        lastPreviewedAuto = selected;
+        lastPreviewedAlliance = alliance;
+
+        Pose2d startingPose = startingPoses.get(selected);
+        if (startingPose != null && !DriverStation.isFMSAttached()) {
+            drivetrain.resetPose(AllianceFlipUtil.apply(startingPose));
+        }
+    }
     public Command getAutonomousCommand() {
-        return autoChooser.getSelected();
+        return autos.get(selectedAuto);
     }
 
     public void updateControlsForAlliance(Alliance alliance) {
         stateController.updateAlliance(alliance);
+    }
+
+    public void updateRumble() {
+        double now = Timer.getFPGATimestamp();
+        double hubRumble = 0;
+        double readyRumble = 0;
+
+        if (DriverStation.isTeleopEnabled()) {
+            HubShiftUtil.ShiftInfo shiftInfo = HubShiftUtil.getShiftInfo();
+            if (!wasTeleop) {
+                lastHubActive = shiftInfo.active();
+                lastShiftTimeLeft = shiftInfo.remainingTime();
+                shiftWarningStartTime = -1;
+            }
+            if (shiftInfo.active() && !lastHubActive) {
+                hubRumbleEndTime = now + 0.5;
+            }
+            if (shiftInfo.remainingTime() <= 3.0 && lastShiftTimeLeft > 3.0) {
+                shiftWarningStartTime = now;
+            }
+            lastHubActive = shiftInfo.active();
+            lastShiftTimeLeft = shiftInfo.remainingTime();
+
+            double warningTime = now - shiftWarningStartTime;
+            boolean warningPulse = shiftWarningStartTime >= 0
+                && ((warningTime < 0.15) || (warningTime >= 0.3 && warningTime < 0.45));
+            if (now < hubRumbleEndTime || warningPulse) {
+                hubRumble = 1.0;
+            }
+            if (shooter.getDesiredSpeed() > 0 && shooter.isAtSpeed()) {
+                readyRumble = 0.3;
+            }
+        }
+        wasTeleop = DriverStation.isTeleopEnabled();
+
+        driverController.getHID().setRumble(RumbleType.kBothRumble, hubRumble);
+        operatorController.getHID().setRumble(RumbleType.kBothRumble, Math.max(hubRumble, readyRumble));
+    }
+
+    public void updateAlerts() {
+        nothingAutoAlert.set(DriverStation.isDisabled() && getAutonomousCommand() == null);
+        lowBatteryAlert.set(DriverStation.isDisabled() && RobotController.getBatteryVoltage() < 11.5);
+
+        List<String> missingDevices = new ArrayList<>();
+        for (int i = 0; i < moduleNames.length; i++) {
+            SwerveModule<TalonFX, TalonFX, CANcoder> module = drivetrain.getModule(i);
+            if (!module.getDriveMotor().isConnected()) {
+                missingDevices.add(moduleNames[i] + " drive");
+            }
+            if (!module.getSteerMotor().isConnected()) {
+                missingDevices.add(moduleNames[i] + " steer");
+            }
+            if (!module.getEncoder().isConnected()) {
+                missingDevices.add(moduleNames[i] + " CANcoder");
+            }
+        }
+        if (!drivetrain.getPigeon2().isConnected()) {
+            missingDevices.add("Pigeon");
+        }
+        if (!missingDevices.isEmpty()) {
+            drivetrainDisconnectedAlert.setText("Drivetrain not responding: " + String.join(", ", missingDevices));
+        }
+        drivetrainDisconnectedAlert.set(drivetrainDisconnectedDebouncer.calculate(!missingDevices.isEmpty()));
     }
 }

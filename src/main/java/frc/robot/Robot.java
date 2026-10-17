@@ -6,31 +6,44 @@ package frc.robot;
 
 import java.util.Optional;
 
+import edu.wpi.first.epilogue.Epilogue;
+import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.epilogue.logging.FileBackend;
+import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Util.HubShiftUtil;
 
+@Logged(strategy = Logged.Strategy.OPT_IN)
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
-  private final RobotContainer m_robotContainer;
+  @Logged private final RobotContainer m_robotContainer;
   private Optional<Alliance> lastAlliance = Optional.empty();
 
 
   public Robot() {
     DataLogManager.start();
     DriverStation.startDataLog(DataLogManager.getLog());
+    WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
     m_robotContainer = new RobotContainer();
+    Epilogue.configure(config -> config.backend = new FileBackend(DataLogManager.getLog()));
+    Epilogue.bind(this);
   }
 
   @Override
   public void robotPeriodic() {
+    m_robotContainer.updateDriveInputs();
     CommandScheduler.getInstance().run();
+    m_robotContainer.updateRumble();
+    m_robotContainer.updateAlerts();
+    m_robotContainer.publishSelectedAuto();
     SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
     HubShiftUtil.ShiftInfo shiftInfo = HubShiftUtil.getShiftInfo();
     SmartDashboard.putBoolean("HubActive", shiftInfo.active());
@@ -54,7 +67,9 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+    m_robotContainer.previewStartingPose();
+  }
 
   @Override
   public void disabledExit() {}

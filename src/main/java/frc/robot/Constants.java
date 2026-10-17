@@ -1,20 +1,8 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.MetersPerSecond;
-
-import com.pathplanner.lib.util.DriveFeedforwards;
-import com.pathplanner.lib.util.FlippingUtil;
-
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 
 public class Constants {
@@ -48,91 +36,41 @@ public class Constants {
         public static final double spinUpTimeout = 1.0;
         // --------------------------------------------------------------------
 
-        public static final long windUpTime = 2500; //ms
-        public static final long recoveryTime = 500;
-        public static final double indexerLoadSpeed = -.8;
+        public static final boolean flywheelClosedLoop = false;
+        public static final double flywheelkP = 0.0002;
+        public static final double flywheelkV = 12.0 / flywheelMaxRPM;
 
-        public static final double verticalDisplacemen = 1.3; 
+        public static final double indexerLoadSpeed = -.8;
+        public static final double indexerJamCurrent = 35;
+        public static final double indexerJamVelocity = 5;
+        public static final double indexerJamTime = 0.25;
+        public static final double indexerUnjamTime = 0.3;
+
         public static final double simpleShootingSpeed = .75;               // operator right trigger
         public static final double simpleShootingSpeedHopperExtended = .75; // operator right trigger with hopper out
-        public static final double simpleShootingAngle = 30;
-
-        public static final double maxDistance = 7;
-        public static final double minDistance = 1;
-        public static final double maxHoodAngle = 30;
-        public static final double minHoodAngle = 30;
 
         public static final double scoringHoodAngle = 30;
 
-        public static final double maxProjectileHeight = 5;
-
-        public static final double shotDampener = 1.75;
-
-        public static final double[] correspondingExitVelocity = {1.16, 2.33, 3.49, 4.65, 5.82, 6.98, 8.15, 9.31, 10.47, 11.67};
-        public static final double[] correspondingMotorOutput = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
-        
+        public static final double[] shotDistances = {1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 3.93};
+        public static final double[] shotOutputs = {0.506, 0.62, 0.715, 0.8, 0.877, 0.946, 1.0};
     }
 
-    public class ClimbConstants {
-        public static final int rotationMotorID = 50;
-        public static final int extensionMotorID = 49;
-        public static final int rotationEncoderChannel = 4;
-        public static final int extensionEncoderChannel = 5;
-        public static final double rotationkP = 0;
-        public static final double rotationkI = 0;
-        public static final double rotationkD = 0;
-        public static final double extensionkP = 0;
-        public static final double extensionkI = 0;
-        public static final double extensionkD = 0;
-        public static final double climbRestingAngle = 0;
-        public static final double climbReadyAngle = 0;
-        public static final double climbRetractedDistance = 0;
-        public static final double climbExtendedDistance = 0;
-    }
-
-    public class VisionConstants {
-        public static Matrix<N3, N1> visionStd = VecBuilder.fill(.5,.5,Units.degreesToRadians(5));
-        public static final Transform3d robotToFrontRightCamera = new Transform3d(
-                                                        Units.inchesToMeters(11.6035),
-                                                        Units.inchesToMeters(-11.6835),
-                                                        Units.inchesToMeters(8.124175),
-                                                        new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(-45))
-                                                        );
-        public static final Transform3d robotToBackLeftCamera = new Transform3d(
-                                                        Units.inchesToMeters(-11.6035),
-                                                        Units.inchesToMeters(11.6835),
-                                                        Units.inchesToMeters(8.124175),
-                                                        new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(135))
-                                                        );
-    }
     public class DriveConstants {
         public static final double autonTranslationkP = 5;
         public static final double autonTranslationkI = 0;
-        public static final double autonTranslationkD = 0;            
+        public static final double autonTranslationkD = 0;
         public static final double autonRotationkP = 5;
         public static final double autonRotationkI = 0;
-        public static final double autonRotationkD = 0;        
+        public static final double autonRotationkD = 0;
         public static final double aimDampeningFactorX = 0.5;
         public static final double aimDampeningFactorY = 0.5;
         public static final double aimkP = 5;
         public static final double aimkI = 0;
         public static final double aimkD = 0;
 
-        public static final double bumpTravelDifference = 1.738; // inches
-        public static final double distanceTraveledOverBump = 1.287; // meters
         public static final double bumpTravelTime = 1.3;
 
-        public static final Rotation2d blueForwardX = new Rotation2d(0);
-        public static final Rotation2d redForwardX = new Rotation2d(Units.degreesToRadians(180));
-    
-        public static final Pose2d OL_BUMP_NZ_BLUE = new Pose2d(5.591, 5.525, new Rotation2d(Math.PI));
-        public static final Pose2d OR_BUMP_NZ_BLUE = new Pose2d(5.591, 2.47, new Rotation2d(Math.PI));
-        public static final Pose2d OL_BUMP_AZ_BLUE = new Pose2d(3.525, 5.568, new Rotation2d(0));
-        public static final Pose2d OR_BUMP_AZ_BLUE = new Pose2d(3.525, 2.47, new Rotation2d(0));
-        public static final Pose2d OL_BUMP_NZ_RED = FlippingUtil.flipFieldPose(OL_BUMP_NZ_BLUE);
-        public static final Pose2d OR_BUMP_NZ_RED = FlippingUtil.flipFieldPose(OR_BUMP_NZ_BLUE);
-        public static final Pose2d OL_BUMP_AZ_RED = FlippingUtil.flipFieldPose(OL_BUMP_AZ_BLUE);
-        public static final Pose2d OR_BUMP_AZ_RED = FlippingUtil.flipFieldPose(OR_BUMP_AZ_BLUE);
+        public static final double driveAccelLimit = 8.0;
     }
 
     public class PoseConstants {
@@ -151,10 +89,12 @@ public class Constants {
         public static final Pose2d knownRedLeftTrenchRobotPose = new Pose2d(new Translation2d(FieldConstants.fieldLength - 3.662, FieldConstants.fieldWidth - 6.663), new Rotation2d());
         public static final Pose2d knownBlueRightTrenchRobotPose = new Pose2d(new Translation2d(3.662, FieldConstants.fieldWidth - 6.663), new Rotation2d(Units.degreesToRadians(180)));
         public static final Pose2d knownRedRightTrenchRobotPose = new Pose2d(new Translation2d(FieldConstants.fieldLength - 3.662, 6.663), new Rotation2d());
+        public static final Pose2d leftBumpStartBlue = new Pose2d(new Translation2d(3.525, 5.568), new Rotation2d(Units.degreesToRadians(180)));
+        public static final Pose2d rightBumpStartBlue = new Pose2d(new Translation2d(3.525, 2.47), new Rotation2d(Units.degreesToRadians(180)));
 //        public static final Pose2d neutralZone1 =  new Pose2d(new Translation2d(), new Rotation2d());
 //        public static final Pose2d neutralZone2 =  new Pose2d(new Translation2d(), new Rotation2d());
 
-        
+
     }
 
     public static boolean disableHAL = false;

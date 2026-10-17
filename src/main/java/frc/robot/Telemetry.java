@@ -85,18 +85,10 @@ public class Telemetry {
     private final double[] m_poseArray = new double[3];
     private final double[] m_moduleStatesArray = new double[8];
     private final double[] m_moduleTargetsArray = new double[8];
+    private int m_telemetryCount = 0;
 
     /** Accept the swerve drive state and telemeterize it to SmartDashboard and SignalLogger. */
     public void telemeterize(SwerveDriveState state) {
-        /* Telemeterize the swerve drive state */
-        drivePose.set(state.Pose);
-        driveSpeeds.set(state.Speeds);
-        driveModuleStates.set(state.ModuleStates);
-        driveModuleTargets.set(state.ModuleTargets);
-        driveModulePositions.set(state.ModulePositions);
-        driveTimestamp.set(state.Timestamp);
-        driveOdometryFrequency.set(1.0 / state.OdometryPeriod);
-
         /* Also write to log file */
         m_poseArray[0] = state.Pose.getX();
         m_poseArray[1] = state.Pose.getY();
@@ -112,6 +104,19 @@ public class Telemetry {
         SignalLogger.writeDoubleArray("DriveState/ModuleStates", m_moduleStatesArray);
         SignalLogger.writeDoubleArray("DriveState/ModuleTargets", m_moduleTargetsArray);
         SignalLogger.writeDouble("DriveState/OdometryPeriod", state.OdometryPeriod, "seconds");
+
+        if (++m_telemetryCount % 5 != 0) {
+            return;
+        }
+
+        /* Telemeterize the swerve drive state */
+        drivePose.set(state.Pose);
+        driveSpeeds.set(state.Speeds);
+        driveModuleStates.set(state.ModuleStates);
+        driveModuleTargets.set(state.ModuleTargets);
+        driveModulePositions.set(state.ModulePositions);
+        driveTimestamp.set(state.Timestamp);
+        driveOdometryFrequency.set(1.0 / state.OdometryPeriod);
 
         /* Telemeterize the pose to a Field2d */
         fieldTypePub.set("Field2d");

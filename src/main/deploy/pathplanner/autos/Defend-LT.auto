@@ -1,0 +1,25 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "(DEF-LT-NZ)"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "xLock"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": "Defense",
+  "choreoAuto": false
+}
